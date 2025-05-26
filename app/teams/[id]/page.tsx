@@ -1,16 +1,18 @@
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { TeamDetailContent } from "@/components/team-detail-content"
+import { DashboardLayout } from "@/components/dashboard-layout";
+import { TeamDetailContent } from "./section/TeamDetailContent.section";
 
 interface TeamDetailPageProps {
-  params: {
-    id: string
-  }
+  params: Promise<{
+    id: string;
+  }>;
 }
 
-export default function TeamDetailPage({ params }: TeamDetailPageProps) {
+export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
+  const { id } = await params;
+
   return (
     <DashboardLayout>
-      <TeamDetailContent teamId={params.id} />
+      <TeamDetailContent teamId={id} />
     </DashboardLayout>
-  )
+  );
 }

@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Menu } from "lucide-react"
+import { Button } from "@/components/atomics/button";
+import { Menu } from "lucide-react";
 
 interface SidebarToggleProps {
-  onClick: () => void
+  onClick: () => void;
 }
 
 export function SidebarToggle({ onClick }: SidebarToggleProps) {
@@ -18,5 +18,5 @@ export function SidebarToggle({ onClick }: SidebarToggleProps) {
     >
       <Menu className="h-4 w-4" />
     </Button>
-  )
+  );
 }

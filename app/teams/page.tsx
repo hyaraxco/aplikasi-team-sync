@@ -1,10 +1,10 @@
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { TeamsContent } from "@/components/teams-content"
+import { DashboardLayout } from "../dashboard/section/dashboard-layout";
+import { TeamsContent } from "./section/TeamConten.section";
 
 export default function TeamsPage() {
   return (
     <DashboardLayout>
       <TeamsContent />
     </DashboardLayout>
-  )
+  );
 }

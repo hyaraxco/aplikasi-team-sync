@@ -1,18 +1,35 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CalendarIcon, Download, FileText } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { Calendar } from "@/components/ui/calendar"
+import { useState, useEffect } from "react";
+import { useAuth } from "@/components/auth-provider";
+import { Button } from "@/components/atomics/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/molecules/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { Skeleton } from "@/components/ui/skeleton";
+
+import { CalendarIcon, Download, FileText } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/atomics/popover";
+import { format } from "date-fns";
+import { Calendar } from "@/components/molecules/calendar";
 import {
   getPayrollRecords,
   getTasks,
@@ -21,142 +38,174 @@ import {
   type Task,
   type AttendanceRecord,
   type UserData,
-} from "@/lib/firestore"
-import { collection, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+} from "@/lib/firestore";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { Alert, AlertDescription } from "./molecules/Alert.molecule";
+import { Badge } from "./ui/badge";
 
 export function PayrollContent() {
-  const { user, userRole } = useAuth()
-  const [date, setDate] = useState<Date | undefined>(new Date())
-  const [period, setPeriod] = useState(format(new Date(), "MMMM-yyyy").toLowerCase())
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [payrollRecords, setPayrollRecords] = useState<Payroll[]>([])
-  const [completedTasks, setCompletedTasks] = useState<Task[]>([])
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
-  const [users, setUsers] = useState<Record<string, UserData>>({})
+  const { user, userRole } = useAuth();
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [period, setPeriod] = useState(
+    format(new Date(), "MMMM-yyyy").toLowerCase()
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [payrollRecords, setPayrollRecords] = useState<Payroll[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<
+    AttendanceRecord[]
+  >([]);
+  const [users, setUsers] = useState<Record<string, UserData>>({});
 
   useEffect(() => {
     async function fetchData() {
-      if (!user) return
+      if (!user) return;
 
       try {
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
         // Fetch payroll records, completed tasks, and attendance records
         if (userRole === "admin") {
           const [payrollData, usersSnapshot] = await Promise.all([
             getPayrollRecords(),
             getDocs(collection(db, "users")),
-          ])
+          ]);
 
-          setPayrollRecords(payrollData)
+          setPayrollRecords(payrollData);
 
           // Create a map of user data
-          const usersMap: Record<string, UserData> = {}
+          const usersMap: Record<string, UserData> = {};
           usersSnapshot.docs.forEach((doc) => {
-            usersMap[doc.id] = { id: doc.id, ...doc.data() } as UserData
-          })
-          setUsers(usersMap)
+            usersMap[doc.id] = { id: doc.id, ...doc.data() } as UserData;
+          });
+          setUsers(usersMap);
         } else {
           const [payrollData, tasksData, attendanceData] = await Promise.all([
             getPayrollRecords(user.uid),
             getTasks(user.uid),
             getAttendanceRecords(user.uid),
-          ])
+          ]);
 
-          setPayrollRecords(payrollData)
-          setCompletedTasks(tasksData.filter((task) => task.status === "completed"))
-          setAttendanceRecords(attendanceData)
+          setPayrollRecords(payrollData);
+          setCompletedTasks(
+            tasksData.filter((task) => task.status === "completed")
+          );
+          setAttendanceRecords(attendanceData);
         }
       } catch (error) {
-        console.error("Error fetching payroll data:", error)
-        setError("Failed to load payroll data. Please try again later.")
+        console.error("Error fetching payroll data:", error);
+        setError("Failed to load payroll data. Please try again later.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchData()
-  }, [user, userRole])
+    fetchData();
+  }, [user, userRole]);
 
   // Update period when date changes
   useEffect(() => {
     if (date) {
-      setPeriod(format(date, "MMMM-yyyy").toLowerCase())
+      setPeriod(format(date, "MMMM-yyyy").toLowerCase());
     }
-  }, [date])
+  }, [date]);
 
   // Filter records based on selected date
   const getFilteredRecords = (): Payroll[] => {
-    if (!date) return payrollRecords
+    if (!date) return payrollRecords;
 
-    const selectedMonth = date.getMonth()
-    const selectedYear = date.getFullYear()
+    const selectedMonth = date.getMonth();
+    const selectedYear = date.getFullYear();
 
     return payrollRecords.filter((record) => {
       // Check if period matches the selected month/year
-      return record.period.toLowerCase() === period
-    })
-  }
+      return record.period.toLowerCase() === period;
+    });
+  };
 
   // Calculate total earnings from completed tasks
-  const taskEarnings = completedTasks.reduce((sum, task) => sum + task.price, 0)
+  const taskEarnings = completedTasks.reduce(
+    (sum, task) => sum + task.price,
+    0
+  );
 
   // Calculate total earnings from attendance
-  const attendanceEarnings = attendanceRecords.reduce((sum, record) => sum + (record.earnings || 0), 0)
+  const attendanceEarnings = attendanceRecords.reduce(
+    (sum, record) => sum + (record.earnings || 0),
+    0
+  );
 
   // Calculate total earnings
-  const totalEarnings = taskEarnings + attendanceEarnings
+  const totalEarnings = taskEarnings + attendanceEarnings;
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "paid":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "pending":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
       case "processing":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "failed":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
-  }
+  };
 
   // Filter tasks and attendance records for the selected month
   const filteredTasks = completedTasks.filter((task) => {
-    if (!date || !task.completedAt) return false
-    const completedDate = task.completedAt.toDate()
-    return completedDate.getMonth() === date.getMonth() && completedDate.getFullYear() === date.getFullYear()
-  })
+    if (!date || !task.completedAt) return false;
+    const completedDate = task.completedAt.toDate();
+    return (
+      completedDate.getMonth() === date.getMonth() &&
+      completedDate.getFullYear() === date.getFullYear()
+    );
+  });
 
   const filteredAttendance = attendanceRecords.filter((record) => {
-    if (!date) return false
-    const recordDate = record.date.toDate()
-    return recordDate.getMonth() === date.getMonth() && recordDate.getFullYear() === date.getFullYear()
-  })
+    if (!date) return false;
+    const recordDate = record.date.toDate();
+    return (
+      recordDate.getMonth() === date.getMonth() &&
+      recordDate.getFullYear() === date.getFullYear()
+    );
+  });
 
-  const filteredPayroll = getFilteredRecords()
+  const filteredPayroll = getFilteredRecords();
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Payroll</h1>
-          <p className="text-muted-foreground">{userRole === "admin" ? "Manage team payroll" : "View your earnings"}</p>
+          <p className="text-muted-foreground">
+            {userRole === "admin"
+              ? "Manage team payroll"
+              : "View your earnings"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
+              <Button
+                variant="outline"
+                className="w-[200px] justify-start text-left font-normal"
+              >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date ? format(date, "MMMM yyyy") : <span>Pick a month</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
-              <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+              />
             </PopoverContent>
           </Popover>
           {userRole === "admin" && (
@@ -178,7 +227,9 @@ export function PayrollContent() {
         <Card>
           <CardHeader>
             <CardTitle>Team Payroll</CardTitle>
-            <CardDescription>Payroll summary for all team members</CardDescription>
+            <CardDescription>
+              Payroll summary for all team members
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -205,18 +256,28 @@ export function PayrollContent() {
                 </TableHeader>
                 <TableBody>
                   {filteredPayroll.map((record) => {
-                    const userData = users[record.userId]
-                    const displayName = userData ? userData.displayName || userData.email : record.userId
+                    const userData = users[record.userId];
+                    const displayName = userData
+                      ? userData.displayName || userData.email
+                      : record.userId;
 
                     return (
                       <TableRow key={record.id}>
-                        <TableCell className="font-medium">{displayName}</TableCell>
+                        <TableCell className="font-medium">
+                          {displayName}
+                        </TableCell>
                         <TableCell>{record.period}</TableCell>
                         <TableCell>${record.taskEarnings.toFixed(2)}</TableCell>
-                        <TableCell>${record.attendanceEarnings.toFixed(2)}</TableCell>
-                        <TableCell className="font-medium">${record.totalEarnings.toFixed(2)}</TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(record.status)}>{record.status}</Badge>
+                          ${record.attendanceEarnings.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          ${record.totalEarnings.toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(record.status)}>
+                            {record.status}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm">
@@ -225,12 +286,14 @@ export function PayrollContent() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    )
+                    );
                   })}
                 </TableBody>
               </Table>
             ) : (
-              <div className="py-6 text-center text-muted-foreground">No payroll records found for this period</div>
+              <div className="py-6 text-center text-muted-foreground">
+                No payroll records found for this period
+              </div>
             )}
           </CardContent>
         </Card>
@@ -239,7 +302,9 @@ export function PayrollContent() {
           <Card>
             <CardHeader>
               <CardTitle>Earnings Summary</CardTitle>
-              <CardDescription>Your earnings for {format(date || new Date(), "MMMM yyyy")}</CardDescription>
+              <CardDescription>
+                Your earnings for {format(date || new Date(), "MMMM yyyy")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -251,24 +316,45 @@ export function PayrollContent() {
               ) : (
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Task Earnings</p>
+                    <p className="text-sm text-muted-foreground">
+                      Task Earnings
+                    </p>
                     <p className="text-2xl font-bold">
-                      ${filteredTasks.reduce((sum, task) => sum + task.price, 0).toFixed(2)}
+                      $
+                      {filteredTasks
+                        .reduce((sum, task) => sum + task.price, 0)
+                        .toFixed(2)}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Attendance Earnings</p>
+                    <p className="text-sm text-muted-foreground">
+                      Attendance Earnings
+                    </p>
                     <p className="text-2xl font-bold">
-                      ${filteredAttendance.reduce((sum, record) => sum + (record.earnings || 0), 0).toFixed(2)}
+                      $
+                      {filteredAttendance
+                        .reduce(
+                          (sum, record) => sum + (record.earnings || 0),
+                          0
+                        )
+                        .toFixed(2)}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Total Earnings</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total Earnings
+                    </p>
                     <p className="text-2xl font-bold">
                       $
                       {(
-                        filteredTasks.reduce((sum, task) => sum + task.price, 0) +
-                        filteredAttendance.reduce((sum, record) => sum + (record.earnings || 0), 0)
+                        filteredTasks.reduce(
+                          (sum, task) => sum + task.price,
+                          0
+                        ) +
+                        filteredAttendance.reduce(
+                          (sum, record) => sum + (record.earnings || 0),
+                          0
+                        )
                       ).toFixed(2)}
                     </p>
                   </div>
@@ -286,7 +372,9 @@ export function PayrollContent() {
               <Card>
                 <CardHeader>
                   <CardTitle>Completed Tasks</CardTitle>
-                  <CardDescription>Tasks you've completed and their earnings</CardDescription>
+                  <CardDescription>
+                    Tasks you've completed and their earnings
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
@@ -311,10 +399,14 @@ export function PayrollContent() {
                       <TableBody>
                         {filteredTasks.map((task) => (
                           <TableRow key={task.id}>
-                            <TableCell className="font-medium">{task.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {task.name}
+                            </TableCell>
                             <TableCell>{task.projectId}</TableCell>
                             <TableCell>
-                              {task.completedAt ? task.completedAt.toDate().toLocaleDateString() : "N/A"}
+                              {task.completedAt
+                                ? task.completedAt.toDate().toLocaleDateString()
+                                : "N/A"}
                             </TableCell>
                             <TableCell>${task.price.toFixed(2)}</TableCell>
                           </TableRow>
@@ -333,7 +425,9 @@ export function PayrollContent() {
               <Card>
                 <CardHeader>
                   <CardTitle>Attendance Logs</CardTitle>
-                  <CardDescription>Your attendance records and earnings</CardDescription>
+                  <CardDescription>
+                    Your attendance records and earnings
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
@@ -360,14 +454,26 @@ export function PayrollContent() {
                       <TableBody>
                         {filteredAttendance.map((record) => (
                           <TableRow key={record.id}>
-                            <TableCell>{record.date.toDate().toLocaleDateString()}</TableCell>
-                            <TableCell>{format(record.checkIn.toDate(), "hh:mm a")}</TableCell>
                             <TableCell>
-                              {record.checkOut ? format(record.checkOut.toDate(), "hh:mm a") : "Not checked out"}
+                              {record.date.toDate().toLocaleDateString()}
                             </TableCell>
-                            <TableCell>{record.hoursWorked?.toFixed(2) || "N/A"}</TableCell>
-                            <TableCell>${record.hourlyRate.toFixed(2)}</TableCell>
-                            <TableCell>${record.earnings?.toFixed(2) || "0.00"}</TableCell>
+                            <TableCell>
+                              {format(record.checkIn.toDate(), "hh:mm a")}
+                            </TableCell>
+                            <TableCell>
+                              {record.checkOut
+                                ? format(record.checkOut.toDate(), "hh:mm a")
+                                : "Not checked out"}
+                            </TableCell>
+                            <TableCell>
+                              {record.hoursWorked?.toFixed(2) || "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              ${record.hourlyRate.toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              ${record.earnings?.toFixed(2) || "0.00"}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -384,5 +490,5 @@ export function PayrollContent() {
         </div>
       )}
     </div>
-  )
+  );
 }
