@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore"
+import { getFirestore } from "firebase/firestore"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,14 +16,15 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const db = getFirestore(app)
 
-// Connect to emulator if in development
-if (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true") {
-  try {
-    connectFirestoreEmulator(db, "localhost", 8080)
-    console.log("Connected to Firestore emulator")
-  } catch (error) {
-    console.error("Failed to connect to Firestore emulator:", error)
-  }
+// Secondary app for admin operations (creating users without affecting current session)
+let secondaryApp: any = null;
+let secondaryAuth: any = null;
+
+try {
+  secondaryApp = getApps().find(app => app.name === 'secondary') || initializeApp(firebaseConfig, 'secondary');
+  secondaryAuth = getAuth(secondaryApp);
+} catch (error) {
+  console.warn('Secondary Firebase app initialization failed:', error);
 }
 
-export { auth, db }
+export { app, auth, db, secondaryAuth }

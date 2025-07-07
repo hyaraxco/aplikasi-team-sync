@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/molecules/card";
+import { Card } from "@/components/molecules/card";
 import type { Project } from "@/lib/firestore";
 import ProjectFilterBar from "./ProjectFilterBar";
 import { useState, useEffect, useCallback } from "react";
@@ -14,16 +9,18 @@ import { useAuth } from "@/components/auth-provider";
 import ProjectCard from "@/app/projects/section/ProjectCard.section";
 import { removeTeamFromProject, getTeamProjects } from "@/lib/firestore";
 import { DeleteProjectDialog } from "./DeleteProject.section";
-import { Trash2 } from "lucide-react";
 import { Button } from "@/components/atomics/Button.atomic";
 import { EmptyState } from "@/components/common/data-display/EmptyState";
-import { FolderKanban } from "lucide-react";
+import { FolderKanban, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ProjectsTableProps {
   projects: Project[];
   teamId: string;
   teamName: string;
   onDataRefresh?: () => void;
+  loading?: boolean;
+  onActivitiesRefresh?: () => void;
 }
 
 export function ProjectsTable({
@@ -31,9 +28,12 @@ export function ProjectsTable({
   teamId,
   teamName,
   onDataRefresh,
+  loading = false,
+  onActivitiesRefresh,
 }: ProjectsTableProps) {
   const { userRole } = useAuth ? useAuth() : { userRole: undefined };
   const isAdmin = userRole === "admin";
+  const router = useRouter();
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [projectToRemove, setProjectToRemove] = useState<Project | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -49,6 +49,7 @@ export function ProjectsTable({
   const handleProjectAdded = () => {
     setRefreshKey((k) => k + 1);
     if (onDataRefresh) onDataRefresh();
+    if (onActivitiesRefresh) onActivitiesRefresh();
   };
 
   const handleRemoveProject = (project: Project) => {
@@ -65,6 +66,7 @@ export function ProjectsTable({
       setProjectToRemove(null);
       handleProjectAdded();
       if (onDataRefresh) onDataRefresh();
+      if (onActivitiesRefresh) onActivitiesRefresh();
     } catch (err) {
       // Error handling bisa ditambah jika ingin
     }
@@ -158,6 +160,10 @@ export function ProjectsTable({
     }
   };
 
+  const navigateToProjectDetail = (projectId: string) => {
+    router.push(`/projects/${projectId}`);
+  };
+
   return (
     <div className="space-y-4">
       <ProjectFilterBar
@@ -186,10 +192,23 @@ export function ProjectsTable({
       )}
 
       {/* Empty state jika tidak ada project yang sesuai filter/search */}
-      {filteredProjects.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array(4)
+            .fill(0)
+            .map((_, idx) => (
+              <Card key={idx} className="p-6 animate-pulse">
+                <div className="h-6 w-1/2 bg-muted rounded mb-4" />
+                <div className="h-4 w-1/3 bg-muted rounded mb-2" />
+                <div className="h-4 w-1/4 bg-muted rounded mb-2" />
+                <div className="h-2 w-full bg-muted rounded mb-2" />
+              </Card>
+            ))}
+        </div>
+      ) : filteredProjects.length === 0 ? (
         <Card>
           <EmptyState
-            // icon={FolderKanban}
+            icon={<FolderKanban className="h-5 w-5" />}
             title={
               projects.length === 0 ? "No projects yet" : "No projects found"
             }
@@ -207,7 +226,10 @@ export function ProjectsTable({
             const totalTasks = project.metrics?.totalTasks || 0;
             return (
               <div key={project.id} className="relative">
-                <ProjectCard project={project} />
+                <ProjectCard
+                  project={project}
+                  onClick={() => navigateToProjectDetail(project.id)}
+                />
                 {isAdmin && (
                   <div className="absolute bottom-4 right-4 z-10 mt-2">
                     <Button

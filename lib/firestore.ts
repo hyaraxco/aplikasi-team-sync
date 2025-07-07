@@ -14,33 +14,42 @@ import {
   Timestamp,
   limit,
   arrayUnion,
+  FieldValue,
+  Query,
+  DocumentData,
+  onSnapshot,
+  Unsubscribe,
 } from "firebase/firestore"
 import { db, auth } from "./firebase"
-import { USER_ROLES } from "./constants"
 
 // User types
-export type UserRole = "admin" | "user"
+export type UserRole = "admin" | "employee"
 
 export interface UserData {
   id: string
   email: string
-  displayName?: string
+  displayName: string
+  bio?: string
   photoURL?: string
   role: UserRole
-  status?: string // Add status field
+  status: "active" | "inactive" | "pending"
   createdAt: Timestamp
   updatedAt: Timestamp
-  hourlyRate?: number
-  department?: string
-  position?: string
-  phoneNumber?: string
-  bio?: string
-  activeTeams?: string[] // Teams the user is currently active in
-  preferredWorkingHours?: { // User's preferred working hours
-    start: string // e.g., "09:00"
-    end: string   // e.g., "17:00"
-    timezone?: string // e.g., "Asia/Jakarta"
-  }
+  department?: string // Optional - can be empty for some users
+  position?: string // Optional - can be empty for some users
+  phoneNumber?: string // Optional - can be empty for some users
+  lastActive?: Timestamp // Optional - for tracking last login
+  baseSalary?: number // Optional - for tracking salary
+}
+
+// Earning types - NEW
+export interface Earning {
+  id: string;
+  userId: string;
+  type: "task" | "attendance";
+  refId: string; // ID of the task or attendance record
+  amount: number;
+  createdAt: Timestamp;
 }
 
 // Project types
@@ -56,6 +65,18 @@ export enum ProjectPriority {
   High = "high"
 }
 
+// Milestone interface for project milestones
+export interface Milestone {
+  id: string
+  title: string
+  status: "not-started" | "in-progress" | "completed" | "overdue"
+  dueDate: Timestamp
+  progress?: number // 0-100, optional for milestone progress
+  description?: string
+  createdAt?: Timestamp
+  updatedAt?: Timestamp
+}
+
 export interface Project {
   id: string
   name: string
@@ -69,6 +90,19 @@ export interface Project {
   priority: ProjectPriority
   taskIds?: string[] // IDs of tasks associated with this project
   metrics?: ProjectMetrics // Metrics for quick project progress overview
+  client?: string
+  clientContact?: string
+  budget?: number
+  lead?: string
+  projectManager?: {
+    userId: string
+    name: string
+    email: string
+    phone?: string
+    role: string
+    photoURL?: string
+  }
+  milestones?: Milestone[] // List of milestones for this project
 }
 
 // Interface for Project Metrics
@@ -82,7 +116,8 @@ export interface ProjectMetrics {
 }
 
 // Task types
-export type TaskStatus = "not-started" | "in-progress" | "completed" | "blocked"
+export type TaskStatus = "backlog" | "in_progress" | "completed" | "revision" | "done" | "blocked"
+export type TaskPriority = "low" | "medium" | "high"
 
 // Interface for Task Comments
 export interface TaskComment {
@@ -97,13 +132,14 @@ export interface TaskComment {
 
 export interface Task {
   id: string
-  name: string
+  name: string // This can serve as 'title'
   description?: string
   projectId: string
-  assignedTo?: string[] // Changed to array to support multiple assignees or unassigned
-  status: TaskStatus
+  assignedTo?: string[] // Kept as array, admin form might assign one. Logic in approveTask will handle.
+  status: TaskStatus // UPDATED to new TaskStatus
+  priority: TaskPriority
   deadline: Timestamp
-  price: number
+  taskRate?: number // ADDED for task-based earnings
   createdBy: string
   createdAt: Timestamp
   updatedAt: Timestamp
@@ -148,8 +184,8 @@ export interface AttendanceRecord {
   checkIn: Timestamp
   checkOut?: Timestamp
   hoursWorked?: number
-  hourlyRate: number // Rate at the time of this specific attendance record
-  earnings?: number
+  baseSalary: number // Rate at the time of this specific attendance record
+  earnings?: number // This might be total earnings from this specific attendance, or cumulative from all. Let's assume specific.
   notes?: string
   createdAt: Timestamp
   updatedAt: Timestamp
@@ -176,9 +212,7 @@ export interface Payroll {
 }
 
 // Activity types
-export type ActivityType = "project" | "task" | "team" | "attendance" | "payroll" | "user"
-
-import { FieldValue } from "firebase/firestore"
+export type ActivityType = "project" | "task" | "team" | "attendance" | "payroll" | "user" | "auth" | "earning"
 
 // Define standard action types for activities
 export enum ActivityActionType {
@@ -192,6 +226,11 @@ export enum ActivityActionType {
   TASK_COMPLETED = "task_completed",
   TASK_ASSIGNED = "task_assigned",
   TASK_STATUS_CHANGED = "task_status_changed",
+  // NEW Task Actions for Review Workflow & Earnings
+  TASK_SUBMITTED_FOR_REVIEW = "task_submitted_for_review",
+  TASK_APPROVED_WITH_EARNING = "task_approved_with_earning",
+  TASK_APPROVED_NO_EARNING = "task_approved_no_earning",
+  TASK_REVISION_REQUESTED = "task_revision_requested",
   // Team Actions
   TEAM_CREATED = "team_created",
   TEAM_UPDATED = "team_updated",
@@ -209,12 +248,22 @@ export enum ActivityActionType {
   // Payroll Actions
   PAYROLL_GENERATED = "payroll_generated",
   PAYROLL_STATUS_UPDATED = "payroll_status_updated",
-  // User Profile Actions (Example)
+  // User Profile Actions
   USER_PROFILE_UPDATED = "user_profile_updated",
-  // Generic/System
-  GENERIC_UPDATE = "generic_update",
-  GENERIC_CREATE = "generic_create",
-  GENERIC_DELETE = "generic_delete",
+  USER_CREATED = "user_created",
+  USER_UPDATED = "user_updated",
+  USER_ACTIVATED = "user_activated",
+  USER_DEACTIVATED = "user_deactivated",
+  USER_REACTIVATED = "user_reactivated",
+  USER_REGISTERED_PENDING_APPROVAL = "user_registered_pending_approval",
+  USER_PERMANENTLY_DELETED = "user_permanently_deleted",
+  // Authentication Actions
+  AUTH_LOGIN = "auth_login",
+  AUTH_LOGOUT = "auth_logout",
+  AUTH_PASSWORD_CHANGE = "auth_password_change",
+  AUTH_ROLE_CHANGE = "auth_role_change",
+  // NEW Earning Action
+  EARNING_CREATED = "earning_created",
 }
 
 export interface Activity {
@@ -228,6 +277,7 @@ export interface Activity {
   teamId?: string // If the activity is directly related to a specific team's context
   details?: Record<string, any> // For additional structured information about the activity
   status?: "read" | "unread" // For notification purposes
+  authId?: string // If the activity is related to an authentication event
 }
 
 // Team metrics interface
@@ -262,16 +312,43 @@ export async function getUserData(userId: string): Promise<UserData | null> {
 
 export async function createUserData(userId: string, userData: Partial<UserData>): Promise<void> {
   try {
-    const now = serverTimestamp()
-    await setDoc(doc(db, "users", userId), {
+    const now = serverTimestamp();
+    const finalUserData = {
       ...userData,
-      role: userData.role || "user",
+      role: userData.role || "employee",
+      status: userData.status || "pending", // Default status "pending" jika tidak disediakan
       createdAt: now,
       updatedAt: now,
-    })
+    };
+
+    await setDoc(doc(db, "users", userId), finalUserData);
+
+    // Jika user baru dibuat dengan status "pending", buat notifikasi untuk admin
+    if (finalUserData.status === "pending") {
+      // Ambil semua admin untuk dikirimi notifikasi (atau kirim ke topic/role admin)
+      // Untuk contoh ini, kita buat activity umum yang bisa dilihat admin di halaman notifikasi mereka
+      // (dengan asumsi query notifikasi admin mengambil semua yang relevan)
+      await addActivity({
+        // userId dari admin target, atau null/kosong jika notif sistem untuk semua admin.
+        // Untuk sekarang, kita set userId ke user yang baru dibuat, tapi type/action menandakan ini untuk admin.
+        // Admin akan melihat notif ini karena query notif admin (di NotificationContent) tidak filter userId.
+        userId: "system", // Atau bisa juga user yang melakukan aksi (jika ada, misal admin yg create manual)
+        type: "user",
+        action: ActivityActionType.USER_REGISTERED_PENDING_APPROVAL, // Perlu ditambahkan ke enum ActivityActionType
+        targetId: userId,
+        targetName: finalUserData.displayName || finalUserData.email || "Unknown User", // Nama user baru
+        timestamp: now,
+        status: "unread", // Notifikasi ini belum dibaca
+        details: {
+          message: `New user ${finalUserData.displayName || finalUserData.email} registered and is awaiting approval.`,
+          newUserId: userId,
+          newUserEmail: finalUserData.email,
+        },
+      });
+    }
   } catch (error) {
-    console.error("Error creating user data:", error)
-    throw error
+    console.error("Error creating user data:", error);
+    throw error;
   }
 }
 
@@ -289,20 +366,32 @@ export async function updateUserData(userId: string, userData: Partial<UserData>
 }
 
 // Project functions
-export async function getProjects(projectId?: string): Promise<Project[]> {
+/**
+ * Mengambil daftar project sesuai role dan userId.
+ * Admin: semua project. User: hanya project yang diikutinya.
+ */
+export async function getProjects(userId?: string, role?: UserRole): Promise<Project[]> {
   try {
-    let projectsQuery
-    if (projectId) {
-      projectsQuery = query(collection(db, "projects"), where("id", "==", projectId), orderBy("createdAt", "desc"))
+    let projectsQuery;
+    if (role === "admin") {
+      projectsQuery = query(collection(db, "projects"), orderBy("createdAt", "desc"));
+    } else if (userId) {
+      // Asumsi: field 'teams' berisi array id tim yang diikuti user
+      // Ambil semua tim user, lalu filter project yang timnya diikuti user
+      // Atau jika ada field 'members' array-contains userId, bisa langsung pakai itu
+      projectsQuery = query(
+        collection(db, "projects"),
+        where("members", "array-contains", userId),
+        orderBy("createdAt", "desc")
+      );
     } else {
-      projectsQuery = query(collection(db, "projects"), orderBy("createdAt", "desc"))
+      return [];
     }
-
-    const projectsSnapshot = await getDocs(projectsQuery)
-    return projectsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Project)
+    const projectsSnapshot = await getDocs(projectsQuery);
+    return projectsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Project);
   } catch (error) {
-    console.error("Error fetching projects:", error)
-    return []
+    console.error("Error fetching projects:", error);
+    return [];
   }
 }
 
@@ -337,23 +426,42 @@ export async function createProject(projectData: Omit<Project, "id" | "createdAt
 }
 
 // Task functions
-export async function getTasks(userId?: string, projectId?: string): Promise<Task[]> {
+/**
+ * Mengambil daftar task sesuai role dan userId.
+ * Admin: semua task. User: hanya task yang diassign ke user tsb.
+ */
+export async function getTasks(userId?: string, projectId?: string, role?: UserRole): Promise<Task[]> {
   try {
-    let tasksQuery
-
-    if (projectId) {
-      tasksQuery = query(collection(db, "tasks"), where("projectId", "==", projectId), orderBy("createdAt", "desc"))
+    let tasksQuery;
+    if (role === "admin") {
+      if (projectId) {
+        tasksQuery = query(collection(db, "tasks"), where("projectId", "==", projectId), orderBy("createdAt", "desc"));
+      } else {
+        tasksQuery = query(collection(db, "tasks"), orderBy("createdAt", "desc"));
+      }
     } else if (userId) {
-      tasksQuery = query(collection(db, "tasks"), where("assignedTo", "==", userId), orderBy("createdAt", "desc"))
+      if (projectId) {
+        tasksQuery = query(
+          collection(db, "tasks"),
+          where("projectId", "==", projectId),
+          where("assignedTo", "array-contains", userId),
+          orderBy("createdAt", "desc")
+        );
+      } else {
+        tasksQuery = query(
+          collection(db, "tasks"),
+          where("assignedTo", "array-contains", userId),
+          orderBy("createdAt", "desc")
+        );
+      }
     } else {
-      tasksQuery = query(collection(db, "tasks"), orderBy("createdAt", "desc"))
+      return [];
     }
-
-    const tasksSnapshot = await getDocs(tasksQuery)
-    return tasksSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Task)
+    const tasksSnapshot = await getDocs(tasksQuery);
+    return tasksSnapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) } as Task));
   } catch (error) {
-    console.error("Error fetching tasks:", error)
-    return []
+    console.error("Error fetching tasks:", error);
+    return [];
   }
 }
 
@@ -372,62 +480,208 @@ export async function createTask(taskData: Omit<Task, "id" | "createdAt" | "upda
   }
 }
 
-export async function completeTask(taskId: string, userId: string): Promise<void> {
+export async function updateTask(taskId: string, taskData: Partial<Task>): Promise<void> {
   try {
     const taskRef = doc(db, "tasks", taskId)
-    const now = serverTimestamp()
     await updateDoc(taskRef, {
-      status: "completed",
-      completedAt: now,
-      updatedAt: now,
-    })
-
-    // Add activity
-    await addActivity({
-      userId,
-      type: "task",
-      action: ActivityActionType.TASK_COMPLETED,
-      targetId: taskId,
-      timestamp: now,
+      ...taskData,
+      updatedAt: serverTimestamp(),
     })
   } catch (error) {
-    console.error("Error completing task:", error)
+    console.error("Error updating task:", error)
     throw error
   }
 }
 
+/**
+ * Employee submits a task for review by an admin.
+ * Updates task status to "completed".
+ * @param taskId The ID of the task.
+ * @param employeeId The ID of the employee submitting the task.
+ */
+export async function submitTaskForReview(taskId: string, employeeId: string): Promise<void> {
+  const taskRef = doc(db, "tasks", taskId);
+  const taskSnap = await getDoc(taskRef);
+  if (!taskSnap.exists()) {
+    throw new Error("Task not found");
+  }
+  const taskData = taskSnap.data() as Task;
+
+    await updateDoc(taskRef, {
+    status: "completed", // Status indicating ready for admin review
+    updatedAt: serverTimestamp(),
+    completedAt: serverTimestamp(), // Record completion time by employee
+  });
+
+    await addActivity({
+    userId: employeeId, // Employee who performed the action
+      type: "task",
+    action: ActivityActionType.TASK_SUBMITTED_FOR_REVIEW,
+      targetId: taskId,
+    targetName: taskData.name,
+    details: { projectId: taskData.projectId, submittedBy: employeeId },
+  });
+}
+
+/**
+ * Admin approves a task.
+ * Updates task status to "done" and creates an earning if applicable.
+ * @param taskId The ID of the task.
+ * @param adminId The ID of the admin approving the task.
+ */
+export async function approveTask(taskId: string, adminId: string): Promise<void> {
+  const taskRef = doc(db, "tasks", taskId);
+  const taskSnap = await getDoc(taskRef);
+
+  if (!taskSnap.exists()) {
+    throw new Error("Task not found");
+  }
+  const taskData = taskSnap.data() as Task;
+
+  if (taskData.status !== "completed") {
+    // Ensure task was submitted for review
+    throw new Error("Task is not awaiting approval or has already been processed.");
+  }
+
+  await updateDoc(taskRef, {
+    status: "done", // Final approved state
+    updatedAt: serverTimestamp(),
+  });
+
+  let earningCreated = false;
+  if (taskData.assignedTo && taskData.assignedTo.length > 0 && taskData.taskRate && taskData.taskRate > 0) {
+    for (const assigneeId of taskData.assignedTo) {
+      try {
+        await createEarning({
+          userId: assigneeId,
+          type: "task",
+          refId: taskId,
+          amount: taskData.taskRate, // Assuming taskRate is per assigned user
+        });
+        earningCreated = true;
+      } catch (error) {
+        console.error(`Error creating earning for task ${taskId}, user ${assigneeId}:`, error);
+        // Continue to next assignee if one fails
+      }
+    }
+  }
+
+  if (earningCreated) {
+    await addActivity({
+      userId: adminId, // Admin who performed the action
+      type: "task",
+      action: ActivityActionType.TASK_APPROVED_WITH_EARNING,
+      targetId: taskId,
+      targetName: taskData.name,
+      details: {
+        projectId: taskData.projectId,
+        approvedBy: adminId,
+        assignedTo: taskData.assignedTo,
+        rate: taskData.taskRate,
+      },
+    });
+  } else {
+    await addActivity({
+      userId: adminId, // Admin who performed the action
+      type: "task",
+      action: ActivityActionType.TASK_APPROVED_NO_EARNING,
+      targetId: taskId,
+      targetName: taskData.name,
+      details: {
+        projectId: taskData.projectId,
+        approvedBy: adminId,
+        reason: "No valid assignee or task rate for earning.",
+        assignedTo: taskData.assignedTo,
+        rate: taskData.taskRate,
+      },
+    });
+  }
+}
+
+/**
+ * Admin requests revision for a task.
+ * Updates task status to "revision" and notifies assigned employee(s).
+ * @param taskId The ID of the task.
+ * @param adminId The ID of the admin requesting revision.
+ * @param revisionNote Optional note for the revision.
+ */
+export async function requestTaskRevision(taskId: string, adminId: string, revisionNote?: string): Promise<void> {
+  const taskRef = doc(db, "tasks", taskId);
+  const taskSnap = await getDoc(taskRef);
+
+  if (!taskSnap.exists()) {
+    throw new Error("Task not found");
+  }
+  const taskData = taskSnap.data() as Task;
+
+  if (taskData.status !== "completed" && taskData.status !== "in_progress") {
+     // Allow revision request if task is completed (for review) or even in_progress
+    console.warn(`Requesting revision for task ${taskId} with status ${taskData.status}. Expected "completed" or "in_progress".`);
+  }
+
+  await updateDoc(taskRef, {
+    status: "revision",
+    updatedAt: serverTimestamp(),
+  });
+
+  if (taskData.assignedTo && taskData.assignedTo.length > 0) {
+    for (const assigneeId of taskData.assignedTo) {
+      await addActivity({
+        userId: assigneeId, // Activity FOR the employee
+        type: "task",
+        action: ActivityActionType.TASK_REVISION_REQUESTED,
+        targetId: taskId,
+        targetName: taskData.name,
+        details: {
+          projectId: taskData.projectId,
+          requestedBy: adminId,
+          note: revisionNote || "Revision requested by admin.",
+        },
+      });
+    }
+  } else {
+    // Log activity even if no one is assigned, for admin's record
+     await addActivity({
+        userId: adminId, 
+        type: "task",
+        action: ActivityActionType.TASK_REVISION_REQUESTED,
+        targetId: taskId,
+        targetName: taskData.name,
+        details: {
+          projectId: taskData.projectId,
+          requestedBy: adminId,
+          note: revisionNote || "Revision requested by admin.",
+          warning: "No user was assigned to this task for direct notification."
+        },
+      });
+  }
+}
+
 // Team functions
-export async function getTeams(): Promise<Team[]> {
+/**
+ * Mengambil daftar tim sesuai role dan userId.
+ * Admin: semua tim. User: hanya tim yang diikutinya.
+ */
+export async function getTeams(userId?: string, role?: UserRole): Promise<Team[]> {
   try {
-    const teamsSnapshot = await getDocs(query(collection(db, "teams"), orderBy("createdAt", "desc")));
-    const teamsData = teamsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Team);
-
-    // The calculation of detailed metrics and fetching all member details for all teams
-    // is removed from here to improve performance.
-    // These details should be fetched on demand for a specific team or populated
-    // via background functions.
-
-    // Example of how you might fetch minimal member details (e.g., avatars) if needed for a list view,
-    // but this should be done judiciously or per team.
-    const teamsWithMinimalDetails: Team[] = await Promise.all(
-      teamsData.map(async (team) => {
-        let memberAvatars: UserData[] = [];
-        if (team.members && team.members.length > 0) {
-          // Fetch only a few (e.g., first 3-5) members' UserData for avatars if absolutely necessary for a list.
-          // Consider if even this is needed for the general getTeams() call.
-          // For full member details, use a specific function like getTeamMembersWithData(teamId).
-          const memberIdsToFetch = team.members.slice(0, 3).map(member => member.userId);
-          const memberPromises = memberIdsToFetch.map(id => getUserData(id));
-          const fetchedMembers = (await Promise.all(memberPromises)).filter(member => member !== null) as UserData[];
-          memberAvatars = fetchedMembers;
-        }
-        return {
-          ...team,
-          memberDetails: memberAvatars,
-        };
-      })
-    );
-    return teamsWithMinimalDetails;
+    if (role === "admin") {
+      const teamsSnapshot = await getDocs(query(collection(db, "teams"), orderBy("createdAt", "desc")));
+      return teamsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Team);
+    } else if (userId) {
+      // Ambil semua tim, filter yang ada userId di members
+      const teamsSnapshot = await getDocs(query(collection(db, "teams"), orderBy("createdAt", "desc")));
+      return teamsSnapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }) as Team)
+        .filter((team) => {
+          // Pastikan team.members adalah array dan member adalah objek yang valid sebelum mengakses userId
+          if (Array.isArray(team.members)) {
+            return team.members.some((member) => member && member.userId === userId);
+          }
+          return false; // Jika team.members bukan array, tim ini tidak akan muncul untuk pengguna non-admin
+        });
+    } else {
+      return [];
+    }
   } catch (error) {
     console.error("Error fetching teams:", error);
     return [];
@@ -627,7 +881,7 @@ export async function updateTeam(teamId: string, teamData: Partial<Team>): Promi
       type: "team",
       action: ActivityActionType.TEAM_UPDATED,
       targetId: teamId,
-      targetName: teamData.name,
+      targetName: teamData.name || "Unknown Team",
       timestamp: serverTimestamp(),
       teamId: teamId,
     })
@@ -676,93 +930,167 @@ export async function deleteTeam(teamId: string): Promise<void> {
 }
 
 // Attendance functions
-export async function getAttendanceRecords(
-  userId?: string,
-): Promise<AttendanceRecord[]> {
+/**
+ * Mengambil daftar absensi sesuai role dan userId.
+ * Admin: semua absensi. User: hanya absensi miliknya.
+ */
+export async function getAttendanceRecords(userId?: string, role?: UserRole): Promise<AttendanceRecord[]> {
   try {
-    let attendanceQuery
-
-    if (userId) {
-      attendanceQuery = query(collection(db, "attendance"), where("userId", "==", userId), orderBy("date", "desc"))
+    let attendanceQuery;
+    if (role === "admin") {
+      attendanceQuery = query(collection(db, "attendance"), orderBy("date", "desc"));
+    } else if (userId) {
+      attendanceQuery = query(collection(db, "attendance"), where("userId", "==", userId), orderBy("date", "desc"));
     } else {
-      attendanceQuery = query(collection(db, "attendance"), orderBy("date", "desc"))
+      return [];
+    }
+    const attendanceSnapshot = await getDocs(attendanceQuery);
+    return attendanceSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as AttendanceRecord);
+  } catch (error: any) {
+    console.error("Error fetching attendance records:", error);
+
+    // Handle permission errors specifically
+    if (error?.code === 'permission-denied') {
+      throw new Error("Permission denied accessing attendance records. Please ensure your account has proper permissions.");
     }
 
-    const attendanceSnapshot = await getDocs(attendanceQuery)
-    return attendanceSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as AttendanceRecord)
-  } catch (error) {
-    console.error("Error fetching attendance records:", error)
-    return []
+    return [];
   }
 }
 
-export async function checkIn(userId: string, hourlyRate: number): Promise<string> {
-  try {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+export async function checkIn(userId: string): Promise<string> {
+  // Check if user has already clocked in today
+  const today = new Date();
+  const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+  const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
-    const attendanceRef = await addDoc(collection(db, "attendance"), {
+  const q = query(
+    collection(db, "attendance"),
+    where("userId", "==", userId),
+    where("checkIn", ">=", Timestamp.fromDate(startOfDay)),
+    where("checkIn", "<=", Timestamp.fromDate(endOfDay))
+  );
+
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    throw new Error("User has already clocked in today.");
+  }
+
+  // Proceed to check-in
+  const attendanceRef = await addDoc(collection(db, "attendance"), {
       userId,
-      date: Timestamp.fromDate(today),
-      checkIn: Timestamp.fromDate(now),
-      hourlyRate,
+    checkIn: serverTimestamp(),
+    date: Timestamp.now(), // records the date of checkin
+    baseSalary: 0, // Set to 0 or fetch from UserData if still needed for other purposes
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    })
+  });
 
-    // Add activity
+  // Log activity
     await addActivity({
       userId,
       type: "attendance",
       action: ActivityActionType.ATTENDANCE_CHECK_IN,
       targetId: attendanceRef.id,
-      timestamp: serverTimestamp(),
-    })
+    targetName: `Attendance ${attendanceRef.id}`,
+  });
 
-    return attendanceRef.id
-  } catch (error) {
-    console.error("Error checking in:", error)
-    throw error
+  return attendanceRef.id;
+}
+
+// NEW function to get today's attendance record for a user
+export async function getTodaysAttendance(userId: string): Promise<AttendanceRecord | null> {
+  try {
+    const today = new Date();
+    // Set start of day to 00:00:00.000
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    // Set end of day to 23:59:59.999
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+    const q = query(
+      collection(db, "attendance"),
+      where("userId", "==", userId),
+      where("checkIn", ">=", Timestamp.fromDate(startOfDay)),
+      where("checkIn", "<=", Timestamp.fromDate(endOfDay)),
+      orderBy("checkIn", "desc"), // Get the latest if multiple (should not happen with checkIn logic)
+      limit(1)
+    );
+
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const docSnap = querySnapshot.docs[0];
+      if (docSnap) {
+        return { id: docSnap.id, ...docSnap.data() } as AttendanceRecord;
+      }
+    }
+    return null;
+  } catch (error: any) {
+    console.error("Error fetching today's attendance:", error);
+
+    // Handle permission errors specifically
+    if (error?.code === 'permission-denied') {
+      throw new Error("Permission denied accessing attendance data. Please ensure your account has proper permissions.");
+    }
+
+    throw error;
   }
 }
 
 export async function checkOut(attendanceId: string, userId: string): Promise<void> {
-  try {
-    const attendanceRef = doc(db, "attendance", attendanceId)
-    const attendanceDoc = await getDoc(attendanceRef)
+  const attendanceRef = doc(db, "attendance", attendanceId);
+  const attendanceSnap = await getDoc(attendanceRef);
 
-    if (!attendanceDoc.exists()) {
-      throw new Error("Attendance record not found")
+  if (!attendanceSnap.exists()) {
+    throw new Error("Attendance record not found");
     }
 
-    const attendanceData = attendanceDoc.data() as AttendanceRecord
-    const now = new Date()
-    const checkInTime = attendanceData.checkIn.toDate()
+  const attendanceData = attendanceSnap.data() as AttendanceRecord;
 
-    // Calculate hours worked (in hours)
-    const hoursWorked = (now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60)
+  if (attendanceData.userId !== userId) {
+    throw new Error("User not authorized to check out this record");
+  }
 
-    // Calculate earnings
-    const earnings = hoursWorked * attendanceData.hourlyRate
+  if (attendanceData.checkOut) {
+    throw new Error("Already checked out for this record");
+  }
+
+  const checkOutTime = Timestamp.now();
+  const checkInTime = attendanceData.checkIn;
+
+  // Calculate hours worked (in milliseconds, then convert to hours)
+  const durationMs = checkOutTime.toMillis() - checkInTime.toMillis();
+  const hoursWorked = durationMs / (1000 * 60 * 60);
 
     await updateDoc(attendanceRef, {
-      checkOut: Timestamp.fromDate(now),
-      hoursWorked,
-      earnings,
+    checkOut: checkOutTime,
+    hoursWorked: parseFloat(hoursWorked.toFixed(2)), // Store with 2 decimal places
       updatedAt: serverTimestamp(),
-    })
+  });
 
-    // Add activity
+  // Log activity
     await addActivity({
       userId,
       type: "attendance",
       action: ActivityActionType.ATTENDANCE_CHECK_OUT,
       targetId: attendanceId,
-      timestamp: serverTimestamp(),
-    })
+    targetName: `Attendance ${attendanceId}`,
+    details: { hours: parseFloat(hoursWorked.toFixed(2)) },
+  });
+
+  // Create earning if duration is >= 8 hours
+  if (hoursWorked >= 8) {
+    try {
+      await createEarning({
+        userId: userId,
+        type: "attendance",
+        refId: attendanceId,
+        amount: 10000, // Fixed amount as per spec
+      });
+      // createEarning already logs its own activity (EARNING_CREATED)
   } catch (error) {
-    console.error("Error checking out:", error)
-    throw error
+      console.error(`Error creating earning for attendance ${attendanceId}:`, error);
+      // Potentially add a specific activity log for failed attendance earning creation
+    }
   }
 }
 
@@ -797,21 +1125,25 @@ export async function getUserActivities(userId: string, limitCount = 10): Promis
 }
 
 // Payroll functions
-export async function getPayrollRecords(userId?: string): Promise<Payroll[]> {
+/**
+ * Mengambil daftar payroll sesuai role dan userId.
+ * Admin: semua payroll. User: hanya payroll miliknya.
+ */
+export async function getPayrollRecords(userId?: string, role?: UserRole): Promise<Payroll[]> {
   try {
-    let payrollQuery
-
-    if (userId) {
-      payrollQuery = query(collection(db, "payroll"), where("userId", "==", userId), orderBy("createdAt", "desc"))
+    let payrollQuery;
+    if (role === "admin") {
+      payrollQuery = query(collection(db, "payroll"), orderBy("createdAt", "desc"));
+    } else if (userId) {
+      payrollQuery = query(collection(db, "payroll"), where("userId", "==", userId), orderBy("createdAt", "desc"));
     } else {
-      payrollQuery = query(collection(db, "payroll"), orderBy("createdAt", "desc"))
+      return [];
     }
-
-    const payrollSnapshot = await getDocs(payrollQuery)
-    return payrollSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Payroll)
+    const payrollSnapshot = await getDocs(payrollQuery);
+    return payrollSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Payroll);
   } catch (error) {
-    console.error("Error fetching payroll records:", error)
-    return []
+    console.error("Error fetching payroll records:", error);
+    return [];
   }
 }
 
@@ -990,15 +1322,16 @@ export async function getTeamPayroll(teamId: string): Promise<PayrollData[]> {
 
       // Get tasks completed by this user
       const tasks = await getTasks(memberId)
-      const completedTasks = tasks.filter((task) => task.status === "completed")
-      const taskEarnings = completedTasks.reduce((sum, task) => sum + task.price, 0)
+      // Filter for tasks approved by admin ("done") and ensure taskRate is a number for sum
+      const approvedTasks = tasks.filter((task) => task.status === "done")
+      const taskEarnings = approvedTasks.reduce((sum, task) => sum + (task.taskRate || 0), 0)
 
       // Get attendance records for this user
       const attendanceRecords = await getAttendanceRecords(memberId)
       const attendanceEarnings = attendanceRecords.reduce((sum, record) => sum + (record.earnings || 0), 0)
 
       // Calculate base salary (simplified)
-      const baseSalary = userData.hourlyRate ? userData.hourlyRate * 160 : 0 // Assuming 160 hours per month
+      const baseSalary = 0 // hourlyRate sudah tidak ada di UserData, set 0 atau implementasi lain jika perlu
 
       payrollData.push({
         id: memberId,
@@ -1008,7 +1341,7 @@ export async function getTeamPayroll(teamId: string): Promise<PayrollData[]> {
         taskCompletionBonus: taskEarnings,
         attendanceBonus: attendanceEarnings,
         baseSalary: baseSalary,
-        tasksCompleted: completedTasks.length,
+        tasksCompleted: approvedTasks.length,
         attendanceDays: attendanceRecords.length,
       })
     }
@@ -1069,11 +1402,26 @@ export async function updateTeamMemberDetails(
     }
 
     const updatedMembers = [...teamData.members];
-    // Merge existing member data with updates
-    updatedMembers[memberIndex] = {
-      ...updatedMembers[memberIndex],
-      ...memberUpdates,
+    // Merge existing member data with updates, ensuring required fields are preserved
+    const existingMember = updatedMembers[memberIndex];
+    if (!existingMember) {
+      throw new Error(`Member at index ${memberIndex} not found`);
+    }
+
+    const updatedMember: TeamMember = {
+      userId: existingMember.userId, // Preserve required userId
+      role: memberUpdates.role ?? existingMember.role, // Use update or existing
+      joinedAt: existingMember.joinedAt, // Preserve required joinedAt
     };
+
+    // Only add status if it exists (since it's optional)
+    if (memberUpdates.status !== undefined) {
+      updatedMember.status = memberUpdates.status;
+    } else if (existingMember.status !== undefined) {
+      updatedMember.status = existingMember.status;
+    }
+
+    updatedMembers[memberIndex] = updatedMember;
 
     // Cek jika member yang diupdate adalah leader
     let updateData: any = {
@@ -1210,12 +1558,16 @@ export async function getUserByEmail(email: string): Promise<UserData | null> {
     const q = query(usersRef, where("email", "==", email));
     const querySnapshot = await getDocs(q);
 
-    if (querySnapshot.empty) {
+    if (querySnapshot.empty || querySnapshot.docs.length === 0) {
       console.log(`No user found with email: ${email}`);
       return null;
     }
     // Assuming email is unique, return the first match
     const userDoc = querySnapshot.docs[0];
+    if (!userDoc) {
+      console.log(`No user document found with email: ${email}`);
+      return null;
+    }
     return { id: userDoc.id, ...userDoc.data() } as UserData;
   } catch (error) {
     console.error("Error fetching user by email:", error);
@@ -1245,7 +1597,7 @@ export async function getAvailableUsersForTeam(teamId: string): Promise<UserData
     // Get all regular users (non-admin) who are not yet team members
     const usersQuery = query(
       collection(db, "users"),
-      where("role", "==", USER_ROLES.USER) // Explicitly use USER_ROLES.USER constant
+      where("role", "==", "employee")
     );
 
     const usersSnapshot = await getDocs(usersQuery);
@@ -1254,7 +1606,7 @@ export async function getAvailableUsersForTeam(teamId: string): Promise<UserData
       .filter(user => {
         // Additional validation checks
         const isNotCurrentMember = !currentMemberIds.includes(user.id);
-        const isRegularUser = user.role === USER_ROLES.USER;
+        const isRegularUser = user.role === "employee";
         const isActiveUser = user.status !== "inactive"; // Optional: only show active users
 
         return isNotCurrentMember && isRegularUser && isActiveUser;
@@ -1372,3 +1724,298 @@ export async function removeTeamFromProject(projectId: string, teamId: string): 
     },
   });
 }
+
+// Update a project
+export async function updateProject(projectId: string, projectData: Partial<Project>): Promise<Project> {
+  try {
+    const projectRef = doc(db, "projects", projectId);
+    await updateDoc(projectRef, {
+      ...projectData,
+      updatedAt: serverTimestamp(),
+    });
+
+    // Add activity log
+    await addActivity({
+      userId: projectData.createdBy || "system",
+      type: "project",
+      action: ActivityActionType.PROJECT_UPDATED,
+      targetId: projectId,
+      targetName: projectData.name || "Unknown Project",
+      timestamp: serverTimestamp(),
+      details: { ...projectData },
+    });
+
+    // Get the updated project data
+    const updatedProjectDoc = await getDoc(projectRef);
+    if (!updatedProjectDoc.exists()) {
+      throw new Error("Project not found after update");
+    }
+    return { id: updatedProjectDoc.id, ...updatedProjectDoc.data() } as Project;
+  } catch (error) {
+    console.error("Error updating project:", error);
+    throw error;
+  }
+}
+
+// Get a specific project by ID
+export async function getProjectById(projectId: string): Promise<Project | null> {
+  try {
+    const projectDoc = await getDoc(doc(db, "projects", projectId));
+    if (projectDoc.exists()) {
+      return { id: projectDoc.id, ...projectDoc.data() } as Project;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching project:", error);
+    return null;
+  }
+}
+
+// Delete a project
+export async function deleteProject(projectId: string): Promise<void> {
+  try {
+    const projectRef = doc(db, "projects", projectId);
+    const projectDoc = await getDoc(projectRef);
+    if (!projectDoc.exists()) {
+      throw new Error("Project not found");
+    }
+    const projectData = projectDoc.data() as Project;
+    await deleteDoc(projectRef);
+    // Add activity log
+    await addActivity({
+      userId: auth.currentUser?.uid || "system",
+      type: "project",
+      action: ActivityActionType.PROJECT_DELETED,
+      targetId: projectId,
+      targetName: projectData.name,
+      timestamp: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    throw new Error("Failed to delete project");
+  }
+}
+
+// Ambil seluruh activity yang terkait dengan project tertentu
+export async function getProjectActivities(projectId: string): Promise<Activity[]> {
+  try {
+    // Ambil activity yang targetId-nya sama dengan projectId (langsung terkait project)
+    const directQuery = query(
+      collection(db, "activities"),
+      where("targetId", "==", projectId),
+      orderBy("timestamp", "desc"),
+      limit(50)
+    );
+    const directSnap = await getDocs(directQuery);
+    let activities = directSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Activity);
+
+    // Ambil activity yang details.projectId == projectId (misal aktivitas pada task, team, dsb yang menyimpan projectId di details)
+    const allActivitiesSnap = await getDocs(query(collection(db, "activities")));
+    const relatedActivities = allActivitiesSnap.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }) as Activity)
+      .filter((act) => act.details && act.details.projectId === projectId);
+
+    // Gabungkan dan hilangkan duplikat
+    const all = [...activities, ...relatedActivities];
+    const unique = Array.from(new Map(all.map(a => [a.id, a])).values());
+    // Urutkan terbaru dulu
+    unique.sort((a, b) => {
+      const ta = (a.timestamp as any)?.seconds || 0;
+      const tb = (b.timestamp as any)?.seconds || 0;
+      return tb - ta;
+    });
+    return unique;
+  } catch (error) {
+    console.error("Error fetching project activities:", error);
+    return [];
+  }
+}
+
+// Mark all activities as read for current user
+export async function markAllActivitiesAsRead(userId: string): Promise<void> {
+  const q = query(collection(db, "activities"), where("userId", "==", userId), where("status", "==", "unread"));
+  const snap = await getDocs(q);
+  const batch = (await import("firebase/firestore")).writeBatch(db);
+  snap.forEach((docSnap) => {
+    batch.update(doc(db, "activities", docSnap.id), { status: "read" });
+  });
+  await batch.commit();
+}
+
+export async function activateUser(adminUserId: string, userIdToActivate: string): Promise<void> {
+  try {
+    const userRef = doc(db, "users", userIdToActivate);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      throw new Error("User to activate not found.");
+    }
+
+    const userData = userDoc.data() as UserData;
+
+    if (userData.status === "active") {
+      // console.log("User is already active.");
+      // return; // Atau throw error jika dianggap tidak valid
+      throw new Error("User is already active.");
+    }
+
+    const now = serverTimestamp();
+    await updateDoc(userRef, {
+      status: "active",
+      updatedAt: now,
+    });
+
+    // 1. Notifikasi ke user yang diaktivasi
+    await addActivity({
+      userId: userIdToActivate, // Notifikasi untuk user yang bersangkutan
+      type: "user",
+      action: ActivityActionType.USER_ACTIVATED,
+      targetId: userIdToActivate,
+      targetName: userData.displayName || userData.email || "Unknown User",
+      timestamp: now,
+      status: "unread",
+      details: {
+        message: "Your account has been activated. You can now log in.",
+      },
+    });
+
+    // 2. Catat aktivitas bahwa admin mengaktivasi user (untuk log admin/sistem)
+    const adminUser = await getUserData(adminUserId); // Ambil data admin yang melakukan aksi
+    await addActivity({
+      userId: adminUserId, // Admin yang melakukan aksi
+      type: "user",
+      action: ActivityActionType.USER_ACTIVATED, // Menggunakan tipe aksi yang lebih spesifik untuk log admin
+      targetId: userIdToActivate,
+      targetName: userData.displayName || userData.email || "Unknown User",
+      timestamp: now,
+      status: "unread", // Ubah menjadi unread agar muncul di notifikasi admin
+      details: {
+        message: `Activated user: ${userData.displayName || userData.email}`,
+        activatedUserId: userIdToActivate,
+        adminActor: adminUser?.displayName || adminUserId, 
+      },
+    });
+
+  } catch (error) {
+    console.error("Error activating user:", error);
+    throw error;
+  }
+}
+
+// Fungsi baru untuk menghapus data pengguna dari Firestore
+export async function deleteUserRecord(userId: string): Promise<void> {
+  try {
+    const userRef = doc(db, "users", userId);
+    await deleteDoc(userRef);
+    // PENTING: Ini HANYA menghapus data dari Firestore.
+    // Penghapusan dari Firebase Authentication HARUS ditangani secara terpisah,
+    // idealnya melalui backend (Cloud Function) menggunakan Admin SDK
+    // untuk memastikan keamanan dan hak akses yang benar.
+    // Jika tidak, akun di Firebase Auth akan menjadi yatim.
+    // Komponen UI yang memanggil fungsi ini sebaiknya menangani notifikasi.
+    console.info("User record deleted from Firestore. Firebase Auth account may still exist if not handled by a backend process.");
+  } catch (error) {
+    console.error("Error deleting user record from Firestore:", error);
+    throw error;
+  }
+}
+
+// Earning Functions - NEW
+/**
+ * Creates a new earning record in Firestore and logs an activity.
+ * @param earningData Data for the new earning (excluding id and createdAt).
+ * @returns The ID of the newly created earning document.
+ */
+export async function createEarning(earningData: Omit<Earning, "id" | "createdAt">): Promise<string> {
+  const earningRef = await addDoc(collection(db, "earnings"), {
+    ...earningData,
+    createdAt: serverTimestamp(),
+  });
+
+  await addActivity({
+    userId: earningData.userId,
+    type: "earning",
+    action: ActivityActionType.EARNING_CREATED,
+    targetId: earningRef.id,
+    targetName: `Earning: ${earningData.amount} (${earningData.type})`,
+    details: {
+      amount: earningData.amount,
+      type: earningData.type,
+      refId: earningData.refId,
+    },
+  });
+  return earningRef.id;
+}
+
+/**
+ * Retrieves all earnings for a specific user, ordered by creation date.
+ * @param userId The ID of the user whose earnings are to be fetched.
+ * @returns A promise that resolves to an array of Earning objects.
+ */
+export async function getEarningsByUserId(userId: string): Promise<Earning[]> {
+  const earningsCol = collection(db, "earnings");
+  const q = query(earningsCol, where("userId", "==", userId), orderBy("createdAt", "desc"));
+  const querySnapshot = await getDocs(q);
+  const earnings: Earning[] = [];
+  querySnapshot.forEach((doc) => {
+    earnings.push({ id: doc.id, ...doc.data() } as Earning);
+  });
+  return earnings;
+}
+
+/**
+ * Subscribe to real-time updates of earnings for a specific user.
+ * @param userId The ID of the user.
+ * @param callback Callback invoked with an array of Earnings on data change.
+ * @param errorCallback Callback invoked when an error occurs.
+ * @returns Unsubscribe function to stop listening.
+ */
+export function subscribeEarningsByUserId(
+  userId: string,
+  callback: (earnings: Earning[]) => void,
+  errorCallback?: (error: any) => void
+): Unsubscribe {
+  const earningsCol = collection(db, "earnings");
+  const q = query(earningsCol, where("userId", "==", userId), orderBy("createdAt", "desc"));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const data: Earning[] = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) } as Earning));
+      callback(data);
+    },
+    (error) => {
+      console.error("Error in subscribeEarningsByUserId:", error);
+      if (errorCallback) {
+        errorCallback(error);
+      }
+    }
+  );
+}
+
+/**
+ * Subscribe to real-time updates of all earnings (admin view).
+ * @param callback Callback invoked with an array of Earnings on data change.
+ * @param errorCallback Callback invoked when an error occurs.
+ * @returns Unsubscribe function to stop listening.
+ */
+export function subscribeAllEarnings(
+  callback: (earnings: Earning[]) => void,
+  errorCallback?: (error: any) => void
+): Unsubscribe {
+  const earningsCol = collection(db, "earnings");
+  const q = query(earningsCol, orderBy("createdAt", "desc"));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const data: Earning[] = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) } as Earning));
+      callback(data);
+    },
+    (error) => {
+      console.error("Error in subscribeAllEarnings:", error);
+      if (errorCallback) {
+        errorCallback(error);
+      }
+    }
+  );
+}
+

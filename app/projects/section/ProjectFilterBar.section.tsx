@@ -1,26 +1,21 @@
 "use client";
 
 import React from "react";
-import { DataFilterBar } from "@/components/common/data-display/DataFilterBar";
-import { FilterOption } from "@/components/common/data-display/FilterDropdown";
-import { SortOption } from "@/components/common/data-display/SortDropdown";
-import { ProjectStatus } from "@/lib/firestore"; // Assuming ProjectStatus type is available
+import FilterBar, {
+  FilterOption,
+  SortOption,
+} from "@/components/common/data-display/FilterBar";
 
-export interface ProjectFilters {
-  status: ProjectStatus[];
-  teamIds: string[]; // Add other filter types here
-}
-
-export type ProjectSortField = "name" | "deadline" | "status";
+export type ProjectFilters = Record<string, string[]>;
 
 interface ProjectFilterBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   filters: ProjectFilters;
-  onFilterChange: (type: keyof ProjectFilters, value: string) => void;
-  sortField: ProjectSortField;
+  onFilterChange: (type: string, value: string) => void;
+  sortField: string;
   sortDirection: "asc" | "desc";
-  onSortFieldChange: (field: ProjectSortField) => void;
+  onSortFieldChange: (field: string) => void;
   onSortDirectionChange: (direction: "asc" | "desc") => void;
   onClearFilters: () => void;
 }
@@ -32,7 +27,7 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { id: "completed", label: "Completed" },
 ];
 
-const SORT_OPTIONS: SortOption<ProjectSortField>[] = [
+const SORT_OPTIONS: SortOption[] = [
   { id: "name", label: "Project Name" },
   { id: "deadline", label: "Deadline" },
   { id: "status", label: "Status" },
@@ -49,32 +44,24 @@ const ProjectFilterBar = ({
   onSortDirectionChange,
   onClearFilters,
 }: ProjectFilterBarProps) => {
-  const filterConfigs = [
-    {
-      type: "Status",
-      label: "Filter by status",
-      options: STATUS_FILTER_OPTIONS,
-      values: filters.status,
-      onChange: (value: string) => onFilterChange("status", value as ProjectStatus),
-    },
-    // Add other filter configurations here
-  ];
-
-  const hasActiveFilters = filters.status.length > 0 || searchTerm.length > 0;
+  const filterOptions = {
+    status: STATUS_FILTER_OPTIONS,
+    // Tambahkan filter lain jika ada
+  };
 
   return (
-    <DataFilterBar
+    <FilterBar
       searchTerm={searchTerm}
       onSearchChange={onSearchChange}
-      searchPlaceholder="Search projects..."
-      filters={filterConfigs}
+      filters={filters}
+      filterOptions={filterOptions}
+      onFilterChange={onFilterChange}
       sortField={sortField}
       sortOptions={SORT_OPTIONS}
       sortDirection={sortDirection}
       onSortFieldChange={onSortFieldChange}
       onSortDirectionChange={onSortDirectionChange}
       onClearFilters={onClearFilters}
-      hasFilters={hasActiveFilters}
     />
   );
 };

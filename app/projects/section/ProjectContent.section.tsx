@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/atomics/button";
 import {
@@ -11,23 +12,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/molecules/dialog";
 import { Input } from "@/components/atomics/input";
 import { Label } from "@/components/atomics/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import ProjectCard from "./ProjectCard.section"; // Import the new ProjectCard
-
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
-import { Plus, CalendarIcon, CircleX } from "lucide-react";
 import {
   getProjects,
   createProject,
@@ -36,37 +27,37 @@ import {
   type Team,
   ProjectStatus,
   ProjectPriority,
-  getTeamProjects,
-  getTeamTasks,
-  getTeamMetrics,
+  getUsers,
+  type UserData,
+  getTasks,
 } from "@/lib/firestore";
-import ProjectFilterBar, {
-  type ProjectFilters,
-  type ProjectSortField,
-} from "./ProjectFilterBar.section";
-import { Timestamp, deleteDoc, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/atomics/popover";
-import { Calendar } from "@/components/molecules/calendar";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import ProjectFilterBar from "./ProjectFilterBar.section";
+import { Timestamp } from "firebase/firestore";
+
 import { EmptyState } from "@/components/common/data-display/EmptyState";
 import { PageHeader } from "@/components/common/layout/PageHeader";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/molecules/Alert.molecule";
+import { Badge } from "@/components/ui/badge";
+import { CircleX, FolderKanban, FolderPlus, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/molecules/Select.molecule";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { DatePicker } from "@/components/molecules/AntDatePicker";
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
 
 export function ProjectsContent() {
+  const router = useRouter();
   const { user, userRole } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [projectStatus, setProjectStatus] = useState<ProjectStatus>(
     ProjectStatus.Planning
@@ -74,81 +65,86 @@ export function ProjectsContent() {
   const [projectPriority, setProjectPriority] = useState<ProjectPriority>(
     ProjectPriority.Low
   );
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [formData, setFormData] = useState<{
+  const [projectFormData, setProjectFormData] = useState<{
     name: string;
     description: string;
-    deadline?: Date;
+    deadline: Date | undefined;
+    client: string;
+    clientContact: string;
+    budget: string;
+    projectManager: string;
   }>({
     name: "",
     description: "",
     deadline: undefined,
+    client: "",
+    clientContact: "",
+    budget: "",
+    projectManager: "",
   });
+  const [displayBudget, setDisplayBudget] = useState("");
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [isSubmittingProject, setIsSubmittingProject] = useState(false);
 
-  // State for ProjectFilterBar
+  // Filter states
   const [searchTerm, setSearchTerm] = useState("");
-  const [projectFilters, setProjectFilters] = useState<ProjectFilters>({
+  const [projectFilters, setProjectFilters] = useState<
+    Record<string, string[]>
+  >({
     teamIds: [],
     status: [],
   });
-  const [projectSortField, setProjectSortField] =
-    useState<ProjectSortField>("name");
-  const [projectSortDirection, setProjectSortDirection] = useState<
-    "asc" | "desc"
-  >("asc");
+
+  // Sort states
+  const [projectSortField, setProjectSortField] = useState<string>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     async function fetchData() {
       if (!user) return;
 
       try {
-        setLoading(true);
+        setIsLoading(true);
         setError(null);
 
         // Fetch projects and teams
-        const projectsData = await getProjects();
-        const teamsData = await getTeams();
+        const projectsData = await getProjects(
+          user?.uid,
+          userRole || undefined
+        );
+        const teamsData = await getTeams(user?.uid, userRole || undefined);
+        const usersData = await getUsers();
 
-        // Fetch metrics for each project's teams
+        // Fetch metrics for each project dari seluruh task project
         const projectsWithMetrics = await Promise.all(
           projectsData.map(async (project) => {
-            if (project.teams && project.teams.length > 0) {
-              const teamMetricsPromises = project.teams.map((teamId) =>
-                getTeamMetrics(teamId)
-              );
-              const teamMetrics = await Promise.all(teamMetricsPromises);
-
-              // Calculate total metrics for project
-              const totalTasks = teamMetrics.reduce(
-                (sum, metrics) => sum + (metrics?.totalTasks || 0),
-                0
-              );
-              const completedTasks = teamMetrics.reduce(
-                (sum, metrics) => sum + (metrics?.completedTasks || 0),
-                0
-              );
-
-              return {
-                ...project,
-                metrics: {
-                  totalTasks,
-                  completedTasks,
-                  completionRate:
-                    totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
-                },
-              };
-            }
-            return project;
+            // Fetch seluruh task untuk project ini
+            const allTasks = await getTasks(undefined, project.id);
+            const totalTasks = allTasks.length;
+            const completedTasks = allTasks.filter(
+              (t) => t.status === "completed"
+            ).length;
+            const completionRate =
+              totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            return {
+              ...project,
+              metrics: {
+                totalTasks,
+                completedTasks,
+                completionRate,
+              },
+            };
           })
         );
 
         setProjects(projectsWithMetrics);
         setTeams(teamsData);
+        setUsers(usersData);
       } catch (error) {
         console.error("Error fetching projects data:", error);
         setError("Failed to load projects. Please try again later.");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
 
@@ -159,7 +155,18 @@ export function ProjectsContent() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
+    setProjectFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = parseCurrencyInput(e.target.value);
+    if (rawValue === "" || /^[0-9]*$/.test(rawValue)) {
+      setDisplayBudget(formatCurrencyInput(rawValue));
+      setProjectFormData((prev) => ({
+        ...prev,
+        budget: rawValue === "" ? "" : rawValue,
+      }));
+    }
   };
 
   const handleAddTeam = (teamId: string) => {
@@ -172,129 +179,92 @@ export function ProjectsContent() {
     setSelectedTeams(selectedTeams.filter((id) => id !== teamId));
   };
 
-  const handleDeadlineChange = (date: Date | undefined) => {
-    setFormData((prev) => ({ ...prev, deadline: date }));
+  const handleDeadlineChange = (date: Date | null) => {
+    setProjectFormData((prev) => ({ ...prev, deadline: date || undefined }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    try {
-      setError(null);
-      if (!formData.deadline) {
-        setError("Deadline is required.");
-        return;
-      }
 
-      await createProject({
-        name: formData.name,
-        description: formData.description,
-        deadline: Timestamp.fromDate(formData.deadline),
+    // Validasi awal sebelum menutup dialog dan memulai loading utama
+    if (!projectFormData.deadline) {
+      setError("Deadline is required.");
+      return;
+    }
+    if (
+      !projectFormData.name ||
+      !projectFormData.deadline ||
+      !projectStatus ||
+      !projectPriority ||
+      selectedTeams.length === 0 ||
+      !projectFormData.client ||
+      !projectFormData.projectManager
+    ) {
+      setError("All fields are required.");
+      return;
+    }
+
+    setIsSubmittingProject(true); // Mulai loading tombol
+    setIsProjectDialogOpen(false); // TUTUP DIALOG SEGERA
+    setIsLoading(true); // Mulai loading skeleton halaman utama
+    setError(null); // Reset error sebelumnya
+
+    try {
+      const pmUser = users.find((u) => u.id === projectFormData.projectManager);
+      const newProject = {
+        name: projectFormData.name,
+        description: projectFormData.description,
+        deadline: Timestamp.fromDate(projectFormData.deadline!),
         status: projectStatus,
         teams: selectedTeams,
         createdBy: user.uid,
         priority: projectPriority,
-      });
+        client: projectFormData.client,
+        clientContact: projectFormData.clientContact,
+        budget: projectFormData.budget
+          ? Number(projectFormData.budget)
+          : undefined,
+        projectManager: pmUser
+          ? {
+              userId: pmUser.id,
+              name: pmUser.displayName || pmUser.email,
+              email: pmUser.email,
+              role: pmUser.role,
+              ...(pmUser.photoURL ? { photoURL: pmUser.photoURL } : {}),
+            }
+          : undefined,
+      };
+
+      await createProject(newProject);
 
       // Refresh projects list
-      const updatedProjects = await getProjects();
+      const updatedProjects = await getProjects(
+        user?.uid,
+        userRole || undefined
+      );
       setProjects(updatedProjects);
 
-      // Reset form
-      setFormData({
+      // Reset form (sekarang dialog sudah tertutup, jadi ini hanya membersihkan state)
+      setProjectFormData({
         name: "",
         description: "",
         deadline: undefined,
+        client: "",
+        clientContact: "",
+        budget: "",
+        projectManager: "",
       });
+      setDisplayBudget("");
       setSelectedTeams([]);
       setProjectStatus(ProjectStatus.Planning);
       setProjectPriority(ProjectPriority.Low);
-      setIsDialogOpen(false);
     } catch (error) {
       console.error("Error creating project:", error);
-      setError("Failed to create project. Please try again.");
-    }
-  };
-
-  const handleEditProject = (project: Project) => {
-    setEditingProject(project);
-    setFormData({
-      name: project.name,
-      description: project.description || "",
-      deadline: project.deadline ? project.deadline.toDate() : undefined,
-    });
-    setSelectedTeams(project.teams);
-    setProjectStatus(project.status);
-    setProjectPriority(project.priority); // Set priority for editing
-    setIsEditDialogOpen(true);
-  };
-
-  const handleUpdateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!user || !editingProject) return;
-
-    try {
-      setError(null);
-
-      if (!formData.deadline) {
-        setError("Deadline is required.");
-        return;
-      }
-
-      await updateDoc(doc(db, "projects", editingProject.id), {
-        name: formData.name,
-        description: formData.description,
-        deadline: Timestamp.fromDate(formData.deadline),
-        status: projectStatus,
-        priority: projectPriority, // Add priority here
-        teams: selectedTeams,
-        updatedAt: Timestamp.now(),
-      });
-
-      // Refresh projects list
-      const updatedProjects = await getProjects();
-      setProjects(updatedProjects);
-
-      // Reset form
-      setEditingProject(null);
-      setFormData({
-        name: "",
-        description: "",
-        deadline: undefined,
-      });
-      setSelectedTeams([]);
-      setProjectStatus(ProjectStatus.Planning);
-      setProjectPriority(ProjectPriority.Low); // Also reset priority
-      setIsEditDialogOpen(false);
-    } catch (error) {
-      console.error("Error updating project:", error);
-      setError("Failed to update project. Please try again.");
-    }
-  };
-
-  const handleDeleteProject = async (projectId: string) => {
-    if (!user) return;
-
-    if (
-      !confirm(
-        "Are you sure you want to delete this project? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setError(null);
-
-      await deleteDoc(doc(db, "projects", projectId));
-
-      // Refresh projects list
-      const updatedProjects = await getProjects();
-      setProjects(updatedProjects);
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      setError("Failed to delete project. Please try again.");
+      setError("Failed to create project. Please try again later.");
+    } finally {
+      setIsSubmittingProject(false); // Selesai loading tombol
+      setIsLoading(false); // Selesai loading skeleton halaman utama
     }
   };
 
@@ -303,32 +273,34 @@ export function ProjectsContent() {
     setSearchTerm(value);
   };
 
-  const handleProjectFilterChange = (
-    type: keyof ProjectFilters,
-    value: string
-  ) => {
+  const handleProjectFilterChange = (type: string, value: string) => {
     setProjectFilters((prev) => {
-      const newValues = prev[type].includes(value as ProjectStatus)
-        ? prev[type].filter((item) => item !== value)
-        : [...prev[type], value as ProjectStatus];
+      const arr = prev[type] || [];
+      const newValues = arr.includes(value)
+        ? arr.filter((item) => item !== value)
+        : [...arr, value];
       return { ...prev, [type]: newValues };
     });
   };
 
-  const handleProjectSortFieldChange = (field: ProjectSortField) => {
+  const handleProjectSortFieldChange = (field: string) => {
     setProjectSortField(field);
   };
 
   const handleProjectSortDirectionChange = (direction: "asc" | "desc") => {
-    setProjectSortDirection(direction);
+    setSortDirection(direction);
   };
 
   const clearProjectFilters = () => {
     setSearchTerm("");
-    setProjectFilters({ status: [], teamIds: [] });
+    setProjectFilters({ teamIds: [], status: [] });
     // Reset sort to default if desired
     // setProjectSortField("name");
     // setProjectSortDirection("asc");
+  };
+
+  const navigateToProjectDetail = (projectId: string) => {
+    router.push(`/projects/${projectId}`);
   };
 
   const applyProjectFiltersAndSort = () => {
@@ -355,23 +327,16 @@ export function ProjectsContent() {
     // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
-      const valA = a[projectSortField];
-      const valB = b[projectSortField];
-
       if (projectSortField === "deadline") {
         const dateA = a.deadline ? a.deadline.toDate().getTime() : 0;
         const dateB = b.deadline ? b.deadline.toDate().getTime() : 0;
-        if (dateA < dateB) comparison = -1;
-        if (dateA > dateB) comparison = 1;
-      } else {
-        if (typeof valA === "string" && typeof valB === "string") {
-          comparison = valA.localeCompare(valB);
-        } else {
-          if (valA < valB) comparison = -1;
-          if (valA > valB) comparison = 1;
-        }
+        comparison = dateA - dateB;
+      } else if (projectSortField === "name" || projectSortField === "status") {
+        comparison = String(a[projectSortField]).localeCompare(
+          String(b[projectSortField])
+        );
       }
-      return projectSortDirection === "asc" ? comparison : comparison * -1;
+      return sortDirection === "asc" ? comparison : -comparison;
     });
     return filtered;
   };
@@ -379,185 +344,19 @@ export function ProjectsContent() {
   const displayedProjects = applyProjectFiltersAndSort();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <PageHeader
-            title="Projects"
-            description={
-              userRole === "admin"
-                ? "Manage your organization's projects"
-                : "View and track your projects"
-            }
-          />
-        </div>
-        {userRole === "admin" && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[525px]">
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                  <DialogTitle>Add New Project</DialogTitle>
-                  <DialogDescription>
-                    Create a new project and assign teams to it.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Project Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="deadline">Deadline</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !formData.deadline && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {formData.deadline ? (
-                              format(formData.deadline, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={formData.deadline}
-                            onSelect={handleDeadlineChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select
-                        value={projectStatus}
-                        onValueChange={(value) =>
-                          setProjectStatus(value as ProjectStatus)
-                        }
-                      >
-                        <SelectTrigger id="status">
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(ProjectStatus).map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status.charAt(0).toUpperCase() +
-                                status.slice(1).replace("-", " ")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="priority">Priority</Label>
-                    <Select
-                      value={projectPriority}
-                      onValueChange={(value) =>
-                        setProjectPriority(value as ProjectPriority)
-                      }
-                    >
-                      <SelectTrigger id="priority">
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(ProjectPriority).map((priority) => (
-                          <SelectItem key={priority} value={priority}>
-                            {priority.charAt(0).toUpperCase() +
-                              priority.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Assign Teams</Label>
-                    <Select onValueChange={handleAddTeam}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select teams" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem
-                            key={team.id}
-                            value={team.id}
-                            disabled={selectedTeams.includes(team.id)}
-                          >
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTeams.map((teamId) => {
-                        const team = teams.find((t) => t.id === teamId);
-                        return (
-                          <Badge
-                            key={teamId}
-                            variant="secondary"
-                            className="gap-1"
-                          >
-                            {team ? team.name : "Unknown Team"}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveTeam(teamId)}
-                              className="ml-1 rounded-full outline-none focus:ring-2"
-                            >
-                              <CircleX className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">Create Project</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
-
-      <ProjectFilterBar
-        searchTerm={searchTerm}
-        onSearchChange={handleProjectSearchChange}
-        filters={projectFilters}
-        onFilterChange={handleProjectFilterChange}
-        sortField={projectSortField}
-        sortDirection={projectSortDirection}
-        onSortFieldChange={handleProjectSortFieldChange}
-        onSortDirectionChange={handleProjectSortDirectionChange}
-        onClearFilters={clearProjectFilters}
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        title="Projects"
+        description={
+          userRole === "admin"
+            ? "Manage your organization's projects"
+            : "View and track your projects"
+        }
+        actionLabel={userRole === "admin" ? "Create Project" : undefined}
+        onAction={
+          userRole === "admin" ? () => setIsProjectDialogOpen(true) : undefined
+        }
+        icon={<FolderPlus className="w-4 h-4" />}
       />
 
       {error && (
@@ -566,7 +365,19 @@ export function ProjectsContent() {
         </Alert>
       )}
 
-      {loading ? (
+      <ProjectFilterBar
+        searchTerm={searchTerm}
+        onSearchChange={handleProjectSearchChange}
+        filters={projectFilters}
+        onFilterChange={handleProjectFilterChange}
+        sortField={projectSortField}
+        sortDirection={sortDirection}
+        onSortFieldChange={handleProjectSortFieldChange}
+        onSortDirectionChange={handleProjectSortDirectionChange}
+        onClearFilters={clearProjectFilters}
+      />
+
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array(3)
             .fill(0)
@@ -620,106 +431,138 @@ export function ProjectsContent() {
             <ProjectCard
               key={project.id}
               project={project}
-              // onClick={() => navigateToProjectDetail(project.id)}
+              onClick={() => navigateToProjectDetail(project.id)}
             />
           ))}
         </div>
       ) : (
-        <EmptyState
-          title="No projects found"
-          description={
-            searchTerm
-              ? "No projects found matching your search."
-              : projectFilters.status.length > 0
-                ? "No projects found with the selected status."
-                : "No projects have been created yet, or you don't have access to any."
-          }
-        />
+        <div className="flex flex-col items-center justify-center h-[60vh]">
+          <EmptyState
+            icon={<FolderKanban className="w-10 h-10 text-muted-foreground" />}
+            title="No projects found"
+            description={
+              searchTerm
+                ? "No projects found matching your search."
+                : projectFilters.status.length > 0
+                  ? "No projects found with the selected status."
+                  : "No projects have been created yet, or you don't have access to any."
+            }
+          />
+        </div>
       )}
 
-      {/* Edit Project Dialog */}
-      {/* {editingProject && (
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[525px]">
-            <form onSubmit={handleUpdateProject}>
-              <DialogHeader>
-                <DialogTitle>Edit Project</DialogTitle>
-                <DialogDescription>
-                  Update project details and team assignments.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
+      {/* Create Project Dialog */}
+      <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
+        <DialogContent className="w-full max-w-md md:max-w-lg max-h-[90dvh] p-2 rounded-lg shadow-lg">
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle>Add New Project</DialogTitle>
+            <DialogDescription>
+              Create a new project and assign teams to it.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60dvh] px-4 pb-4">
+            <form onSubmit={handleCreateProject} className="space-y-4 p-1">
+              <div className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-name">Project Name</Label>
+                  <Label htmlFor="name">Project Name</Label>
                   <Input
                     id="name"
-                    value={formData.name}
+                    value={projectFormData.name}
                     onChange={handleInputChange}
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-description">Description</Label>
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
-                    value={formData.description}
+                    value={projectFormData.description}
                     onChange={handleInputChange}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="edit-deadline">Deadline</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.deadline && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.deadline ? (
-                            format(formData.deadline, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={formData.deadline}
-                          onSelect={handleDeadlineChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Label htmlFor="client">Client Name</Label>
+                    <Input
+                      id="client"
+                      value={projectFormData.client}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="edit-status">Status</Label>
-                    <Select
-                      value={projectStatus}
-                      onValueChange={(value) =>
-                        setProjectStatus(value as ProjectStatus)
-                      }
-                    >
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(ProjectStatus).map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status.charAt(0).toUpperCase() +
-                              status.slice(1).replace("-", " ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="clientContact">Client Contact</Label>
+                    <Input
+                      id="clientContact"
+                      value={projectFormData.clientContact}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-priority">Priority</Label>
+                  <Label htmlFor="budget">Budget (IDR)</Label>
+                  <Input
+                    id="budget"
+                    type="text"
+                    value={displayBudget}
+                    onChange={handleBudgetChange}
+                    placeholder="e.g., 50.000.000"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="projectManager">Project Manager</Label>
+                  <Select
+                    value={projectFormData.projectManager}
+                    onValueChange={(value) =>
+                      setProjectFormData((prev) => ({
+                        ...prev,
+                        projectManager: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="projectManager">
+                      <SelectValue placeholder="Select project manager" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.displayName || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="deadline">Deadline</Label>
+                  <DatePicker
+                    value={projectFormData.deadline}
+                    onChange={handleDeadlineChange}
+                    placeholder="Select deadline"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={projectStatus}
+                    onValueChange={(value) =>
+                      setProjectStatus(value as ProjectStatus)
+                    }
+                  >
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(ProjectStatus).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status.charAt(0).toUpperCase() +
+                            status.slice(1).replace("-", " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">Priority</Label>
                   <Select
                     value={projectPriority}
                     onValueChange={(value) =>
@@ -738,7 +581,7 @@ export function ProjectsContent() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-3">
+                <div className="grid gap-2">
                   <Label>Assign Teams</Label>
                   <Select onValueChange={handleAddTeam}>
                     <SelectTrigger>
@@ -757,35 +600,42 @@ export function ProjectsContent() {
                     </SelectContent>
                   </Select>
                   <div className="flex flex-wrap gap-2">
-                      {selectedTeams.map((teamId) => {
-                        const team = teams.find((t) => t.id === teamId);
-                        return (
-                          <Badge
-                            key={teamId}
-                            variant="secondary"
-                            className="gap-1"
+                    {selectedTeams.map((teamId) => {
+                      const team = teams.find((t) => t.id === teamId);
+                      return (
+                        <Badge
+                          key={teamId}
+                          variant="secondary"
+                          className="gap-1"
+                        >
+                          {team ? team.name : "Unknown Team"}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTeam(teamId)}
+                            className="ml-1 rounded-full outline-none focus:ring-2"
                           >
-                            {team ? team.name : "Unknown Team"}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveTeam(teamId)}
-                              className="ml-1 rounded-full outline-none focus:ring-2"
-                            >
-                              <CircleX className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        );
-                      })}
-                    </div>
+                            <CircleX className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Update Project</Button>
+                {isSubmittingProject ? (
+                  <Button disabled>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating
+                  </Button>
+                ) : (
+                  <Button type="submit">Create Project</Button>
+                )}
               </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
-      )} */}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

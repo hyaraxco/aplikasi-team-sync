@@ -42,8 +42,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/atomics/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { addActivity, ActivityActionType } from "@/lib/firestore";
+import { serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/components/auth-provider";
 
 const addProjectSchema = z.object({
   projectId: z.string().min(1, "Pilih project yang ingin ditambahkan."),
@@ -70,6 +73,7 @@ export function AddExistingProjectDialog({
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<AddProjectFormData>({
     resolver: zodResolver(addProjectSchema),
@@ -84,7 +88,7 @@ export function AddExistingProjectDialog({
         setIsLoadingProjects(true);
         try {
           const [allProjects, teamProjects] = await Promise.all([
-            getProjects(),
+            getProjects(undefined, "admin"),
             getTeamProjects(teamId),
           ]);
           // Filter project yang belum ada di tim
@@ -108,6 +112,22 @@ export function AddExistingProjectDialog({
         teamId,
         data.projectId
       );
+      // Catat aktivitas assign project ke team
+      if (user) {
+        await addActivity({
+          userId: user.uid,
+          type: "project",
+          action: ActivityActionType.PROJECT_UPDATED,
+          targetId: addedProject.id,
+          targetName: addedProject.name,
+          timestamp: serverTimestamp(),
+          teamId: teamId,
+          details: {
+            assignedProjectId: addedProject.id,
+            assignedProjectName: addedProject.name,
+          },
+        });
+      }
       toast.success(
         `Berhasil menambahkan project '${addedProject.name}' ke tim ${teamName}.`
       );
@@ -210,7 +230,14 @@ export function AddExistingProjectDialog({
                 type="submit"
                 disabled={isSubmitting || isLoadingProjects}
               >
-                {isSubmitting ? "Adding..." : "Add Project"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                    Adding
+                  </>
+                ) : (
+                  "Add"
+                )}
               </Button>
             </DialogFooter>
           </form>

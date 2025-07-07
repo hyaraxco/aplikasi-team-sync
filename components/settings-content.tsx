@@ -302,7 +302,9 @@ export function SettingsContent() {
               <CardContent className="space-y-4">
                 <div className="grid gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="hourly-rate">Default Hourly Rate ($)</Label>
+                    <Label htmlFor="hourly-rate">
+                      Default Hourly Rate (IDR)
+                    </Label>
                     <Input id="hourly-rate" type="number" defaultValue="20" />
                   </div>
                   <div className="grid gap-2">

@@ -1,8 +1,7 @@
 import React from "react";
-
+import { cn } from "@/lib/utils";
 import { ProjectStatus } from "@/lib/firestore";
-import { getStatusBadge } from "@/app/projects/section/utils";
-import { Badge } from "../ui/badge";
+import { getStatusBadge } from "@/lib/utils";
 
 interface BadgeStatusProps {
   status: ProjectStatus;
@@ -13,12 +12,17 @@ export const BadgeStatus = ({ status, className = "" }: BadgeStatusProps) => {
   const statusBadge = getStatusBadge(status);
 
   return (
-    <Badge
-      className={`${statusBadge.color} text-white text-xs py-0.5 px-2 capitalize flex items-center gap-1 ${className}`}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white capitalize",
+        statusBadge.color,
+        className
+      )}
+      style={{ backgroundColor: statusBadge.hexColor }}
     >
       {statusBadge.Icon && <statusBadge.Icon className="h-3 w-3" />}
       {status.replace("-", " ")}
-    </Badge>
+    </span>
   );
 };
 

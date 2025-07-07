@@ -1,7 +1,7 @@
 import React from "react";
+import { cn } from "@/lib/utils";
 import { ProjectPriority } from "@/lib/firestore";
-import { getPriorityBadge } from "@/app/projects/section/utils";
-import { Badge } from "../ui/badge";
+import { getPriorityBadge } from "@/lib/utils";
 
 interface BadgePriorityProps {
   priority: ProjectPriority;
@@ -15,11 +15,16 @@ export const BadgePriority = ({
   const priorityBadge = getPriorityBadge(priority);
 
   return (
-    <Badge
-      className={`${priorityBadge.color} text-white text-xs py-0.5 px-2 capitalize shrink-0 ${className}`}
+    <span
+      className={cn(
+        "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-white capitalize shrink-0",
+        priorityBadge.color,
+        className
+      )}
+      style={{ backgroundColor: priorityBadge.hexColor }}
     >
       {priority}
-    </Badge>
+    </span>
   );
 };
 

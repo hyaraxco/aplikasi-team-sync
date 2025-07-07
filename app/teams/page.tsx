@@ -1,5 +1,5 @@
 import { DashboardLayout } from "../dashboard/section/dashboard-layout";
-import { TeamsContent } from "./section/TeamConten.section";
+import { TeamsContent } from "./section/TeamContent.section";
 
 export default function TeamsPage() {
   return (

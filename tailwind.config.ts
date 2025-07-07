@@ -8,6 +8,20 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "*.{js,ts,jsx,tsx,mdx}"
   ],
+  safelist: [
+    // Badge background colors for status
+    'bg-blue-500',
+    'bg-yellow-500',
+    'bg-green-500',
+    'bg-red-500',
+    'bg-gray-500',
+    // Additional badge colors that might be used
+    'bg-orange-500',
+    'bg-purple-500',
+    'bg-indigo-500',
+    'bg-pink-500',
+    'bg-teal-500',
+  ],
   theme: {
   	extend: {
   		colors: {

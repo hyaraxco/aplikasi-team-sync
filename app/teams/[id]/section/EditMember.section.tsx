@@ -36,6 +36,10 @@ import {
   FormMessage,
 } from "@/components/molecules/Form.molecule";
 import { Input } from "@/components/atomics/Input.atomic";
+import { addActivity, ActivityActionType } from "@/lib/firestore";
+import { serverTimestamp } from "firebase/firestore";
+import { useAuth } from "@/components/auth-provider";
+import { Loader2 } from "lucide-react";
 
 const memberStatusOptions = [
   { id: "active", label: "Active" },
@@ -61,6 +65,7 @@ interface EditMemberDialogProps {
   onOpenChange: (open: boolean) => void;
   onMemberUpdated: () => void;
   teamLeadId?: string; // userId leader saat ini
+  onFullTeamRefresh?: () => void;
 }
 
 interface TeamMemberWithData extends TeamMember {
@@ -77,9 +82,11 @@ export function EditMemberDialog({
   onOpenChange,
   onMemberUpdated,
   teamLeadId,
+  onFullTeamRefresh,
 }: EditMemberDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSettingLeader, setIsSettingLeader] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<EditMemberFormData>({
     resolver: zodResolver(editMemberFormSchema),
@@ -97,6 +104,26 @@ export function EditMemberDialog({
         role: data.role,
         status: data?.status || "active",
       });
+      if (user) {
+        await addActivity({
+          userId: user.uid,
+          type: "team",
+          action: ActivityActionType.TEAM_MEMBER_DETAILS_UPDATED,
+          targetId: teamId,
+          targetName: teamId,
+          timestamp: serverTimestamp(),
+          teamId: teamId,
+          details: {
+            updatedUserId: memberData.userId,
+            updatedUserName:
+              memberData.userData?.displayName ||
+              memberData.userData?.email ||
+              memberData.userId,
+            updatedUserRole: data.role,
+            updatedUserStatus: data.status,
+          },
+        });
+      }
       onMemberUpdated();
       onOpenChange(false);
     } catch (error) {
@@ -113,7 +140,29 @@ export function EditMemberDialog({
       const userData = await getUserData(memberData.userId);
       if (!userData) throw new Error("User data not found");
       await setTeamLeader(teamId, memberData, userData);
-      onMemberUpdated();
+      if (user) {
+        await addActivity({
+          userId: user.uid,
+          type: "team",
+          action: ActivityActionType.TEAM_LEAD_CHANGED,
+          targetId: teamId,
+          targetName: teamId,
+          timestamp: serverTimestamp(),
+          teamId: teamId,
+          details: {
+            newLeadUserId: memberData.userId,
+            newLeadUserName:
+              memberData.userData?.displayName ||
+              memberData.userData?.email ||
+              memberData.userId,
+          },
+        });
+      }
+      if (onFullTeamRefresh) {
+        onFullTeamRefresh();
+      } else {
+        onMemberUpdated();
+      }
       onOpenChange(false);
     } catch (err) {
       // Error handling bisa ditambah jika ingin
@@ -195,10 +244,17 @@ export function EditMemberDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Member"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                    Updating
+                  </>
+                ) : (
+                  "Update"
+                )}
               </Button>
             </DialogFooter>
-            {/* Tombol Set as Leader */}
+            {/* Set as Leader Button */}
             {teamLeadId !== memberData?.userId && (
               <Button
                 type="button"
@@ -207,7 +263,14 @@ export function EditMemberDialog({
                 onClick={handleSetAsLeader}
                 disabled={isSettingLeader}
               >
-                {isSettingLeader ? "Setting as Leader..." : "Set as Leader"}
+                {isSettingLeader ? (
+                  <>
+                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                    Setting as Leader
+                  </>
+                ) : (
+                  "Set as Leader"
+                )}
               </Button>
             )}
           </form>

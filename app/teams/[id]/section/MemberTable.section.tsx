@@ -30,10 +30,15 @@ import {
   AvatarImage,
 } from "@/components/atomics/Avatar.atomic";
 import { EditMemberDialog } from "./EditMember.section";
-import { removeTeamMember } from "@/lib/firestore";
+import {
+  removeTeamMember,
+  addActivity,
+  ActivityActionType,
+} from "@/lib/firestore";
 import { DeleteMemberDialog } from "./DeleteMember.section";
 import { EmptyState } from "@/components/common/data-display/EmptyState";
 import { Users } from "lucide-react";
+import { serverTimestamp } from "firebase/firestore";
 
 // Update the EnrichedTeamMember type to match TeamMemberWithData
 export type EnrichedTeamMember = TeamMember & {
@@ -50,6 +55,9 @@ interface MembersTableProps {
   onEditMember: (member: EnrichedTeamMember) => void;
   onDataRefresh: () => void;
   teamLeadId?: string;
+  loading?: boolean;
+  onFullTeamRefresh?: () => void;
+  onActivitiesRefresh?: () => void;
 }
 
 export function MembersTable({
@@ -60,8 +68,11 @@ export function MembersTable({
   onDataRefresh,
   teamName,
   teamLeadId,
+  loading = false,
+  onFullTeamRefresh,
+  onActivitiesRefresh,
 }: MembersTableProps) {
-  const { userRole } = useAuth();
+  const { userRole, user } = useAuth();
   const isAdmin = userRole === "admin";
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,6 +87,7 @@ export function MembersTable({
   const [memberToDelete, setMemberToDelete] =
     useState<EnrichedTeamMember | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Buat availableRoles dinamis dari data member
   const availableRoles = Array.from(
@@ -122,16 +134,22 @@ export function MembersTable({
   };
 
   const handleMemberAdded = () => {
-    // toast.success('Member added! Refreshing list...'); // Already handled in AddMemberForm
-    onDataRefresh(); // Inform parent to refresh
+    onDataRefresh();
+    if (onActivitiesRefresh) onActivitiesRefresh();
   };
 
   const handleMemberUpdated = () => {
-    // toast.success('Member updated! Refreshing list...'); // Already handled in EditMemberForm
-    onDataRefresh(); // Inform parent to refresh
+    onDataRefresh();
+    if (onActivitiesRefresh) onActivitiesRefresh();
   };
 
   const handleDeleteMember = (member: EnrichedTeamMember) => {
+    if (member.userId === teamLeadId) {
+      setDeleteError(
+        "Cannot remove the team lead. Please assign a new team lead before removing this member."
+      );
+      return;
+    }
     setMemberToDelete(member);
   };
 
@@ -140,8 +158,29 @@ export function MembersTable({
     setIsDeleting(true);
     try {
       await removeTeamMember(teamId, memberToDelete.userId);
+      // Catat aktivitas penghapusan member
+      if (user) {
+        await addActivity({
+          userId: user.uid,
+          type: "team",
+          action: ActivityActionType.TEAM_MEMBER_REMOVED,
+          targetId: teamId,
+          targetName: teamName || "Team",
+          timestamp: serverTimestamp(),
+          teamId: teamId,
+          details: {
+            removedUserId: memberToDelete.userId,
+            removedUserName:
+              memberToDelete.userData?.displayName ||
+              memberToDelete.userData?.email ||
+              memberToDelete.userId,
+            removedUserPosition: memberToDelete.role,
+          },
+        });
+      }
       setMemberToDelete(null);
       onDataRefresh();
+      if (onActivitiesRefresh) onActivitiesRefresh();
     } catch (err) {
       // Optional: tampilkan error di dialog jika ingin
     }
@@ -275,14 +314,27 @@ export function MembersTable({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Contact</TableHead>
-              <TableHead>Role</TableHead>
+              <TableHead>Position</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Join Date</TableHead>
               <TableHead className="text-right pr-6">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {processedMembers.length > 0 ? (
+            {loading ? (
+              Array(5)
+                .fill(0)
+                .map((_, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell colSpan={6} className="py-4">
+                      <div className="flex gap-2 items-center">
+                        <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                        <div className="flex-1 h-4 bg-muted rounded animate-pulse" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+            ) : processedMembers.length > 0 ? (
               processedMembers.map((member) => {
                 const user = member.userData;
                 const initials =
@@ -304,10 +356,7 @@ export function MembersTable({
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
-                          <AvatarImage
-                            src={user?.photoURL || undefined}
-                            alt={user?.displayName || user?.email || undefined}
-                          />
+                          <AvatarImage src={user?.photoURL || "/avatar.png"} />
                           <AvatarFallback>{initials}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -322,27 +371,34 @@ export function MembersTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        {user?.email && (
+                        {user && (
                           <span className="flex items-center text-xs">
-                            <Mail className="w-3 h-3 mr-1.5 text-muted-foreground" />{" "}
+                            <Mail className="w-3 h-3 mr-1.5 text-muted-foreground" />
                             {user.email}
                           </span>
                         )}
-                        {member?.phone && (
+                        {user && (
                           <span className="flex items-center text-xs">
-                            <Phone className="w-3 h-3 mr-1.5 text-muted-foreground" />{" "}
-                            {member.phone}
+                            <Phone className="w-3 h-3 mr-1.5 text-muted-foreground" />
+                            {user.phoneNumber}
                           </span>
                         )}
-                        {!user?.email && !member?.phone && (
-                          <span className="text-xs text-muted-foreground">
-                            No contact
-                          </span>
-                        )}
+                        {!user?.email &&
+                          !user?.phoneNumber &&
+                          !member?.phone && (
+                            <span className="text-xs text-muted-foreground">
+                              No contact
+                            </span>
+                          )}
                       </div>
                     </TableCell>
                     <TableCell className="text-xs">
                       {member.role || "N/A"}
+                      {user && (
+                        <span className="flex items-center text-xs">
+                          {user.department}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>{getStatusBadge(member)}</TableCell>
                     <TableCell className="text-xs">{joinDate}</TableCell>
@@ -380,6 +436,7 @@ export function MembersTable({
                               className="h-8 w-8 text-red-500 hover:bg-red-100"
                               onClick={() => handleDeleteMember(member)}
                               title="Remove from Team"
+                              disabled={member.userId === teamLeadId}
                             >
                               <Trash2Icon className="h-4 w-4" />
                             </Button>
@@ -394,6 +451,7 @@ export function MembersTable({
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
                   <EmptyState
+                    icon={<Users className="h-5 w-s5" />}
                     title={
                       members.length === 0
                         ? "No members yet"
@@ -438,6 +496,7 @@ export function MembersTable({
               }}
               onMemberUpdated={handleMemberUpdated}
               teamLeadId={teamLeadId}
+              onFullTeamRefresh={onFullTeamRefresh}
             />
           )}
 
@@ -449,6 +508,17 @@ export function MembersTable({
             onDelete={confirmDeleteMember}
             isLoading={isDeleting}
           />
+
+          {deleteError && (
+            <DeleteMemberDialog
+              isOpen={!!deleteError}
+              onClose={() => setDeleteError(null)}
+              member={null}
+              onDelete={() => setDeleteError(null)}
+              isLoading={false}
+              errorMessage={deleteError}
+            />
+          )}
         </>
       )}
     </div>
