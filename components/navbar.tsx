@@ -15,16 +15,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/molecules/dropdown-menu";
 import { Input } from "@/components/atomics/input";
-import { Bell, Search, Menu, ChevronDown } from "lucide-react"; // Added ChevronDown
+import { Search, Menu, ChevronDown, Sun, Moon } from "lucide-react";
+import { NotificationPanel } from "@/components/notification/NotificationPanel";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "./atomics/Avatar.atomic";
+import { useTheme } from "next-themes";
 
 export function Navbar() {
-  const { user, userRole } = useAuth();
+  const { user, userRole, userData } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
   const { toggleSidebar } = useSidebar();
+  const { theme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
+  };
 
   const handleSignOut = async () => {
     try {
@@ -71,14 +78,19 @@ export function Navbar() {
           />
         </form>
 
+        <NotificationPanel />
+
+        {/* Theme Toggle Button */}
         <Button
           variant="ghost"
           size="icon"
+          onClick={toggleTheme}
           className="relative rounded-full w-10 h-10 flex-shrink-0"
+          aria-label="Toggle theme"
         >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-primary"></span>
-          <span className="sr-only">Notifications</span>
+          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Toggle theme</span>
         </Button>
 
         <DropdownMenu>
@@ -89,7 +101,7 @@ export function Navbar() {
             >
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={user?.photoURL || ""}
+                  src={user?.photoURL || "./avatar.png"}
                   alt={user?.email || ""}
                 />
                 <AvatarFallback>{userInitials}</AvatarFallback>
@@ -106,15 +118,18 @@ export function Navbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <p className="text-sm font-semibold">{displayName}</p>
-                <p className="text-xs text-muted-foreground capitalize">
+            <div className="flex flex-col gap-0.5 px-2 py-2 s">
+              <div className="flex items-center gap-2">
+                <span className="text-md font-semibold">{displayName}</span>
+                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium capitalize">
                   {userRole}
-                </p>
+                </span>
               </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+              <div className="text-xs text-muted-foreground capitalize mt-0.5">
+                {userData?.department}
+              </div>
+            </div>
+            <DropdownMenuSeparator className="my-1" />
             <DropdownMenuItem asChild>
               <Link href="/profile">Profile</Link>
             </DropdownMenuItem>

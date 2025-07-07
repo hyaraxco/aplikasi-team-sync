@@ -48,7 +48,7 @@ export function getActivityDisplayMessage(activity: Activity, actorName: string)
       case ActivityActionType.TEAM_MEMBER_ADDED:
         return `${actorName} added ${details.addedMemberName || 'a new member'} to ${target}`;
       case ActivityActionType.TEAM_MEMBER_REMOVED:
-        return `${actorName} removed ${details.removedMemberName || 'a member'} from ${target}`;
+        return `${actorName} removed ${details.memberName || 'a member'} from ${target}`;
       case ActivityActionType.TEAM_MEMBER_ROLE_UPDATED:
         return `${actorName} updated role for ${details.memberName || 'a member'} in ${target}`;
       case ActivityActionType.TEAM_MEMBER_STATUS_UPDATED:
@@ -74,15 +74,30 @@ export function getActivityDisplayMessage(activity: Activity, actorName: string)
 
       // User Profile Actions
       case ActivityActionType.USER_PROFILE_UPDATED:
-        return `${actorName} updated profile`;
+        return `${actorName} updated employee ${target}`;
+      case ActivityActionType.USER_CREATED:
+        return `${actorName} created new employee ${target}`;
+      case ActivityActionType.USER_UPDATED:
+        return `${actorName} updated employee ${target}`;
+      case ActivityActionType.USER_DEACTIVATED:
+        return `${actorName} deactivated employee ${target}`;
+      case ActivityActionType.USER_ACTIVATED:
+        return `${actorName} activated employee ${target}`;
+      case ActivityActionType.USER_REACTIVATED:
+        return `${actorName} reactivated employee ${target}`;
+      case ActivityActionType.AUTH_ROLE_CHANGE:
+        return `${actorName} changed role to ${details.newRole || 'a new role'}`;
+    
 
-      // Generic/System
-      case ActivityActionType.GENERIC_UPDATE:
-        return `${actorName} updated ${target}`;
-      case ActivityActionType.GENERIC_CREATE:
-        return `${actorName} created ${target}`;
-      case ActivityActionType.GENERIC_DELETE:
-        return `${actorName} deleted ${target}`;
+      // Authentication Actions
+      case ActivityActionType.AUTH_LOGIN:
+        return `${actorName} logged in`;
+      case ActivityActionType.AUTH_LOGOUT:
+        return `${actorName} logged out`;
+      case ActivityActionType.AUTH_PASSWORD_CHANGE:
+        return `${actorName} changed password`;
+      case ActivityActionType.USER_REGISTERED_PENDING_APPROVAL:
+        return `${actorName} registered and is pending approval`;
     }
   }
 
@@ -101,5 +116,5 @@ export function getActivityDisplayMessage(activity: Activity, actorName: string)
   }
 
   // Fallback for truly unknown action types
-  return `${actorName} updated ${target}`;
-} 
+  return `${actorName} performed an action on ${target}`;
+}

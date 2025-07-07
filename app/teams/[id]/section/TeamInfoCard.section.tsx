@@ -12,7 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/molecules/card";
-import { Users, Briefcase, ListChecks } from "lucide-react"; // Example icons
+import { Users, Briefcase, ListChecks, UserPen } from "lucide-react"; // Example icons
+import { Button } from "@/components/atomics/button";
 
 export interface TeamLeadInfo {
   name: string;
@@ -26,6 +27,8 @@ interface TeamInfoCardProps {
   totalProjects: number;
   totalTasks: number;
   lead?: TeamLeadInfo;
+  onChangeLeader?: () => void;
+  isAdmin?: boolean;
 }
 
 export function TeamInfoCard({
@@ -34,6 +37,8 @@ export function TeamInfoCard({
   totalProjects,
   totalTasks,
   lead,
+  onChangeLeader,
+  isAdmin = false,
 }: TeamInfoCardProps) {
   return (
     <Card>
@@ -79,7 +84,7 @@ export function TeamInfoCard({
             </h4>
             <div className="flex items-center gap-3 rounded-lg bg-muted/30">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={lead.avatarUrl} alt={lead.name} />
+                <AvatarImage src={lead?.avatarUrl} alt={lead.name} />
                 <AvatarFallback>
                   {lead.name.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
@@ -88,6 +93,17 @@ export function TeamInfoCard({
                 <p className="font-semibold text-sm">{lead.name}</p>
                 <p className="text-xs text-muted-foreground">{lead.role}</p>
               </div>
+              {isAdmin && (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="ml-2"
+                  onClick={onChangeLeader}
+                  variant="secondary"
+                >
+                  <UserPen className="w-4 h-4 mr-1" /> Edit
+                </Button>
+              )}
             </div>
           </div>
         )}

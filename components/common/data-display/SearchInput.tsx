@@ -28,7 +28,7 @@ export const SearchInput = ({
       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
       <Input
         placeholder={placeholder}
-        className="pl-8"
+        className="pl-8 pr-8 border rounded w-full h-10"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         {...props}

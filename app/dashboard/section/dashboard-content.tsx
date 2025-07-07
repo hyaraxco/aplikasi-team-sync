@@ -15,9 +15,10 @@ import {
   getProjects,
   getAttendanceRecords,
   getPayrollRecords,
+  formatRupiah,
   type Task,
   type Project,
-} from "@/lib/firestore";
+} from "@/lib/helpers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/molecules/Alert.molecule";
 
@@ -42,14 +43,14 @@ export function DashboardContent() {
         // Fetch tasks and projects based on user role
         if (userRole === "admin") {
           const [tasksData, projectsData] = await Promise.all([
-            getTasks(),
-            getProjects(),
+            getTasks(undefined, undefined, "admin"),
+            getProjects(undefined, "admin"),
           ]);
           setTasks(tasksData);
           setProjects(projectsData);
 
           // For admin, calculate total earnings across all users
-          const payrollRecords = await getPayrollRecords();
+          const payrollRecords = await getPayrollRecords(undefined, "admin");
           const totalEarnings = payrollRecords.reduce(
             (sum, record) => sum + record.totalEarnings,
             0
@@ -58,19 +59,20 @@ export function DashboardContent() {
         } else {
           // For regular users, only fetch their assigned tasks and calculate their earnings
           if (user) {
-            const [tasksData, projectsData, attendanceRecords] =
+            const [tasksData, projectsData, attendanceRecords, payrollRecords] =
               await Promise.all([
-                getTasks(user.uid),
-                getProjects(user.uid),
-                getAttendanceRecords(user.uid),
+                getTasks(user.uid, undefined, "employee"),
+                getProjects(user.uid, "employee"),
+                getAttendanceRecords(user.uid, "employee"),
+                getPayrollRecords(user.uid, "employee"),
               ]);
             setTasks(tasksData);
             setProjects(projectsData);
 
-            // Calculate total earnings from completed tasks
+            // Calculate total earnings from completed tasks (using taskRate instead of price)
             const taskEarnings = tasksData
-              .filter((t) => t.status === "completed")
-              .reduce((sum, task) => sum + task.price, 0);
+              .filter((t) => t.status === "done")
+              .reduce((sum, task) => sum + (task.taskRate || 0), 0);
 
             // Calculate total earnings from attendance
             const attendanceEarnings = attendanceRecords.reduce(
@@ -78,7 +80,15 @@ export function DashboardContent() {
               0
             );
 
-            setTotalEarnings(taskEarnings + attendanceEarnings);
+            // Calculate total earnings from payroll (if needed)
+            const payrollEarnings = payrollRecords.reduce(
+              (sum, record) => sum + (record.totalEarnings || 0),
+              0
+            );
+
+            setTotalEarnings(
+              taskEarnings + attendanceEarnings + payrollEarnings
+            );
           }
         }
       } catch (error) {
@@ -97,9 +107,11 @@ export function DashboardContent() {
     (p) => p.status === "in-progress"
   ).length;
   const pendingTasks = tasks.filter(
-    (t) => t.status === "not-started" || t.status === "in-progress"
+    (t) => t.status === "backlog" || t.status === "in_progress"
   ).length;
-  const completedTasks = tasks.filter((t) => t.status === "completed").length;
+  const completedTasks = tasks.filter(
+    (t) => t.status === "completed" || t.status === "done"
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -198,7 +210,7 @@ export function DashboardContent() {
             ) : (
               <>
                 <div className="text-2xl font-bold">
-                  ${totalEarnings.toFixed(2)}
+                  {formatRupiah(totalEarnings)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {userRole === "admin"

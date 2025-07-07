@@ -47,7 +47,8 @@ const TeamCard = ({ team, onClick }: TeamProps) => {
             <div>
               <span className="font-medium">Tasks: </span>
               <span>
-                {team.metrics?.completedTasks}/{team.metrics?.totalTasks}
+                {team.metrics?.completedTasks || 0}/
+                {team.metrics?.totalTasks || 0}
               </span>
             </div>
           </div>

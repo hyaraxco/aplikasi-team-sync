@@ -24,7 +24,13 @@ import {
   FormMessage,
 } from "@/components/molecules/form";
 import { toast } from "sonner";
-import { UserData, getUsers, addExistingUserToTeam } from "@/lib/firestore"; // Assuming addExistingUserToTeam will be created
+import {
+  UserData,
+  getUsers,
+  addExistingUserToTeam,
+  addActivity,
+  ActivityActionType,
+} from "@/lib/firestore";
 import {
   Command,
   CommandEmpty,
@@ -38,15 +44,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/atomics/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth-provider";
+import { serverTimestamp } from "firebase/firestore";
 
 const addMemberSchema = z.object({
   userId: z.string().min(1, "User selection is required."),
-  role: z
-    .string()
-    .min(2, "Role must be at least 2 characters.")
-    .max(50, "Role must be 50 characters or less."),
+  // role: z // Dihapus karena peran akan diambil dari posisi pengguna
+  //   .string()
+  //   .min(2, "Role must be at least 2 characters.")
+  //   .max(50, "Role must be 50 characters or less."),
 });
 
 export type AddMemberFormData = z.infer<typeof addMemberSchema>;
@@ -70,12 +78,13 @@ export function AddMemberDialog({
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<AddMemberFormData>({
     resolver: zodResolver(addMemberSchema),
     defaultValues: {
       userId: "",
-      role: "",
+      // role: "", // Dihapus
     },
   });
 
@@ -101,16 +110,45 @@ export function AddMemberDialog({
   const onSubmit = async (data: AddMemberFormData) => {
     setIsSubmitting(true);
     try {
+      const selectedUser = users.find((u) => u.id === data.userId);
+      if (!selectedUser) {
+        toast.error("Selected user not found. Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!selectedUser.position) {
+        toast.error(
+          `User ${selectedUser.displayName || selectedUser.email} does not have a position defined. Cannot add to team.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       const newMember = await addExistingUserToTeam(
         teamId,
         data.userId,
-        data.role
+        selectedUser.position // Menggunakan posisi pengguna sebagai peran
       );
-      const selectedUser = users.find((u) => u.id === data.userId);
       const userName =
         selectedUser?.displayName || selectedUser?.email || data.userId;
+      if (user) {
+        await addActivity({
+          userId: user.uid,
+          type: "team",
+          action: ActivityActionType.TEAM_MEMBER_ADDED,
+          targetId: teamId,
+          targetName: teamName,
+          timestamp: serverTimestamp(),
+          teamId: teamId,
+          details: {
+            addedUserId: data.userId,
+            addedUserName: userName,
+            addedUserPosition: selectedUser.position,
+          },
+        });
+      }
       toast.success(
-        `Successfully added ${userName} to ${teamName} as ${newMember.role}.`
+        `Successfully added ${userName} to ${teamName} as ${selectedUser.position}.` // Menggunakan posisi pengguna
       );
       onMemberAdded(); // Callback to refresh the member list in the parent component
       onClose(); // Close the dialog
@@ -206,22 +244,6 @@ export function AddMemberDialog({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role in Team</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="e.g. Developer, Designer, etc."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <DialogFooter className="gap-2">
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onClose}>
@@ -229,7 +251,14 @@ export function AddMemberDialog({
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting || isLoadingUsers}>
-                {isSubmitting ? "Adding..." : "Add Member"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                    Adding
+                  </>
+                ) : (
+                  "Add"
+                )}
               </Button>
             </DialogFooter>
           </form>

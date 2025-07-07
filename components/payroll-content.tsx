@@ -23,13 +23,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { CalendarIcon, Download, FileText } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/atomics/popover";
 import { format } from "date-fns";
-import { Calendar } from "@/components/molecules/calendar";
+import { MonthPicker } from "@/components/molecules/AntDatePicker";
+import { formatRupiah } from "@/lib/utils";
 import {
   getPayrollRecords,
   getTasks,
@@ -128,7 +124,7 @@ export function PayrollContent() {
 
   // Calculate total earnings from completed tasks
   const taskEarnings = completedTasks.reduce(
-    (sum, task) => sum + task.price,
+    (sum, task) => sum + (task.taskRate || 0),
     0
   );
 
@@ -189,25 +185,12 @@ export function PayrollContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-[200px] justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "MMMM yyyy") : <span>Pick a month</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <MonthPicker
+            value={date}
+            onChange={(date) => setDate(date || undefined)}
+            placeholder="Pick a month"
+            className="w-[200px]"
+          />
           {userRole === "admin" && (
             <Button>
               <Download className="mr-2 h-4 w-4" />
@@ -267,12 +250,14 @@ export function PayrollContent() {
                           {displayName}
                         </TableCell>
                         <TableCell>{record.period}</TableCell>
-                        <TableCell>${record.taskEarnings.toFixed(2)}</TableCell>
                         <TableCell>
-                          ${record.attendanceEarnings.toFixed(2)}
+                          {formatRupiah(record.taskEarnings)}
+                        </TableCell>
+                        <TableCell>
+                          {formatRupiah(record.attendanceEarnings)}
                         </TableCell>
                         <TableCell className="font-medium">
-                          ${record.totalEarnings.toFixed(2)}
+                          {formatRupiah(record.totalEarnings)}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(record.status)}>
@@ -320,10 +305,12 @@ export function PayrollContent() {
                       Task Earnings
                     </p>
                     <p className="text-2xl font-bold">
-                      $
-                      {filteredTasks
-                        .reduce((sum, task) => sum + task.price, 0)
-                        .toFixed(2)}
+                      {formatRupiah(
+                        filteredTasks.reduce(
+                          (sum, task) => sum + (task.taskRate || 0),
+                          0
+                        )
+                      )}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -331,13 +318,12 @@ export function PayrollContent() {
                       Attendance Earnings
                     </p>
                     <p className="text-2xl font-bold">
-                      $
-                      {filteredAttendance
-                        .reduce(
+                      {formatRupiah(
+                        filteredAttendance.reduce(
                           (sum, record) => sum + (record.earnings || 0),
                           0
                         )
-                        .toFixed(2)}
+                      )}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -348,7 +334,7 @@ export function PayrollContent() {
                       $
                       {(
                         filteredTasks.reduce(
-                          (sum, task) => sum + task.price,
+                          (sum, task) => sum + (task.taskRate || 0),
                           0
                         ) +
                         filteredAttendance.reduce(
@@ -408,7 +394,9 @@ export function PayrollContent() {
                                 ? task.completedAt.toDate().toLocaleDateString()
                                 : "N/A"}
                             </TableCell>
-                            <TableCell>${task.price.toFixed(2)}</TableCell>
+                            <TableCell>
+                              {formatRupiah(task.taskRate || 0)}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -469,10 +457,10 @@ export function PayrollContent() {
                               {record.hoursWorked?.toFixed(2) || "N/A"}
                             </TableCell>
                             <TableCell>
-                              ${record.hourlyRate.toFixed(2)}
+                              {formatRupiah((record as any).hourlyRate || 0)}
                             </TableCell>
                             <TableCell>
-                              ${record.earnings?.toFixed(2) || "0.00"}
+                              {formatRupiah((record as any).earnings || 0)}
                             </TableCell>
                           </TableRow>
                         ))}

@@ -21,6 +21,7 @@ import {
   type Project,
   type Activity as ActivityType,
   type TeamMetrics,
+  setTeamLeader,
 } from "@/lib/firestore";
 
 // Import child components and their necessary types
@@ -29,13 +30,14 @@ import { MembersTable, type EnrichedTeamMember } from "./MemberTable.section";
 import { ProjectsTable } from "./ProjectTable.section";
 import { TeamStatsCard } from "./TeamStat.section"; // Removed TeamStatsData import
 import { RecentActivityCard } from "./RecentActivity.section"; // Removed EnrichedActivity import
-import { TeamDetailSkeleton } from "./TeamDetailSklaton.section";
 import { PageHeader } from "@/components/common/layout/PageHeader";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/molecules/Alert.molecule";
+import { TeamDetailSkeleton } from "./TeamDetailSklaton.section";
+import { EditLeaderDialog } from "./EditLeader.section";
 
 interface TeamDetailContentProps {
   teamId: string;
@@ -53,6 +55,8 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [members, setMembers] = useState<EnrichedTeamMember[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
   // State for TeamStatsCard
   const [metrics, setMetrics] = useState<TeamMetrics | null>(null);
@@ -69,6 +73,25 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
 
   const [editTeamDialogOpen, setEditTeamDialogOpen] = useState(false);
   const [deleteTeamDialogOpen, setDeleteTeamDialogOpen] = useState(false);
+  const [editLeadDialogOpen, setEditLeadDialogOpen] = useState(false);
+  const [editLeadLoading, setEditLeadLoading] = useState(false);
+  const [selectedNewLead, setSelectedNewLead] = useState<string | undefined>(
+    undefined
+  );
+
+  const fetchMembers = useCallback(async () => {
+    setLoadingMembers(true);
+    const membersData = await getTeamMembersWithData(teamId);
+    setMembers(membersData);
+    setLoadingMembers(false);
+  }, [teamId]);
+
+  const fetchProjects = useCallback(async () => {
+    setLoadingProjects(true);
+    const projectsData = await getTeamProjects(teamId);
+    setProjects(projectsData);
+    setLoadingProjects(false);
+  }, [teamId]);
 
   const loadTeamData = useCallback(async () => {
     setLoading(true);
@@ -114,11 +137,7 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
       }
       setTeamLeadDisplay(leadDisplay);
 
-      const membersData = await getTeamMembersWithData(teamId);
-      setMembers(membersData);
-
-      const projectsData = await getTeamProjects(teamId);
-      setProjects(projectsData);
+      await Promise.all([fetchMembers(), fetchProjects()]);
 
       const metricsData = await getTeamMetrics(teamId);
       setMetrics(metricsData);
@@ -142,13 +161,34 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
     } finally {
       setLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, fetchMembers, fetchProjects]);
 
-  const handleDataRefresh = useCallback(() => {
-    // toast.info("Refreshing team data...");
-    // A simple way to trigger useEffect for loadTeamData is to change a state variable it depends on.
+  const handleDataRefreshMembers = useCallback(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  const handleDataRefreshProjects = useCallback(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  const handleFullTeamRefresh = useCallback(() => {
     setRefreshKey((prevKey) => prevKey + 1);
   }, []);
+
+  const refreshActivities = useCallback(async () => {
+    const activitiesData = await getTeamActivities(teamId);
+    setRawActivities(activitiesData.slice(0, 10));
+    // Update usersDataMap juga
+    const userIds = new Set(activitiesData.map((act) => act.userId));
+    const usersMap = new Map<string, UserData>();
+    for (const uid of userIds) {
+      const userData = await getUserData(uid);
+      if (userData) {
+        usersMap.set(uid, userData);
+      }
+    }
+    setActivityUsersData(usersMap);
+  }, [teamId]);
 
   useEffect(() => {
     loadTeamData();
@@ -186,6 +226,32 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
       `Edit member functionality for ${member.userData?.displayName || member.userId} is not yet implemented.`
     );
     // TODO: Implement dialog or navigation for editing a member
+  };
+
+  const handleOpenEditLeadDialog = () => setEditLeadDialogOpen(true);
+  const handleCloseEditLeadDialog = () => setEditLeadDialogOpen(false);
+  const handleSaveEditLead = async (userId: string) => {
+    setEditLeadLoading(true);
+    try {
+      const newLeadMember = members.find((m) => m.userId === userId);
+      if (newLeadMember) {
+        let userData = newLeadMember.userData;
+        if (!userData) {
+          userData = await getUserData(newLeadMember.userId);
+          if (!userData) {
+            throw new Error(
+              "User data not found for the selected team leader."
+            );
+          }
+        }
+        await setTeamLeader(teamId, newLeadMember, userData);
+        handleFullTeamRefresh();
+      }
+    } catch (err) {
+      console.error("Failed to update team lead", err);
+    }
+    setEditLeadLoading(false);
+    setEditLeadDialogOpen(false);
   };
 
   if (loading) {
@@ -269,8 +335,10 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
             description={team.description}
             totalMembers={members.length}
             totalProjects={projects.length}
-            totalTasks={metrics?.totalTasks ?? 0} // Use metrics state
+            totalTasks={metrics?.totalTasks ?? 0}
             lead={teamLeadDisplay}
+            isAdmin={userRole === "admin"}
+            onChangeLeader={handleOpenEditLeadDialog}
           />
 
           <Tabs
@@ -289,8 +357,11 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
                 teamName={team?.name}
                 onAddMember={handleAddMember}
                 onEditMember={handleEditMember}
-                onDataRefresh={handleDataRefresh}
+                onDataRefresh={handleDataRefreshMembers}
+                loading={loadingMembers}
                 teamLeadId={team?.lead?.userId}
+                onFullTeamRefresh={handleFullTeamRefresh}
+                onActivitiesRefresh={refreshActivities}
               />
             </TabsContent>
             <TabsContent value="projects">
@@ -298,7 +369,9 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
                 projects={projects}
                 teamId={teamId}
                 teamName={team.name}
-                onDataRefresh={handleDataRefresh}
+                onDataRefresh={handleDataRefreshProjects}
+                loading={loadingProjects}
+                onActivitiesRefresh={refreshActivities}
               />
             </TabsContent>
           </Tabs>
@@ -339,6 +412,14 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
           description={`Are you sure you want to delete the team ${team.name}?`}
         />
       )}
+      <EditLeaderDialog
+        isOpen={editLeadDialogOpen}
+        onClose={handleCloseEditLeadDialog}
+        members={members}
+        onSave={handleSaveEditLead}
+        isLoading={editLeadLoading}
+        defaultValue={team?.lead?.userId}
+      />
     </div>
   );
 }

@@ -17,9 +17,10 @@ import { Input } from "@/components/atomics/input";
 import { Label } from "@/components/atomics/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { updateTeam } from "@/lib/firestore";
-import { Loader2 } from "lucide-react";
+import { updateTeam, addActivity, ActivityActionType } from "@/lib/firestore";
 import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/components/auth-provider";
+import { serverTimestamp } from "firebase/firestore";
 
 interface EditTeamDialogProps {
   open: boolean;
@@ -39,7 +40,7 @@ export function EditTeamDialog({
   onTeamUpdated,
 }: EditTeamDialogProps) {
   const router = useRouter();
-  const { toast } = useToast();
+  const { user } = useAuth();
   const [name, setName] = useState(team.name);
   const [description, setDescription] = useState(team.description || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,10 +80,22 @@ export function EditTeamDialog({
         description,
       });
 
-      toast({
-        title: "Team updated",
-        description: "The team has been updated successfully.",
-      });
+      if (user && (name !== team.name || description !== team.description)) {
+        await addActivity({
+          userId: user.uid,
+          type: "team",
+          action: ActivityActionType.TEAM_UPDATED,
+          targetId: team.id,
+          targetName: name,
+          timestamp: serverTimestamp(),
+          details: {
+            oldName: team.name,
+            newName: name,
+            oldDescription: team.description,
+            newDescription: description,
+          },
+        });
+      }
 
       if (onTeamUpdated) {
         onTeamUpdated(updatedTeam);
@@ -92,11 +105,6 @@ export function EditTeamDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating team:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update team. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setIsSubmitting(false);
     }

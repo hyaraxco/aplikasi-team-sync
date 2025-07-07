@@ -5,6 +5,7 @@ import type React from "react";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { addActivity, ActivityActionType } from "@/lib/firestore";
 import { Button } from "@/components/atomics/button";
 import { Input } from "@/components/atomics/input";
 import { Label } from "@/components/atomics/label";
@@ -26,6 +27,22 @@ export function LoginForm() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       // Redirect is handled by the AuthProvider
+
+      // Add activity log for login
+      if (auth.currentUser) {
+        await addActivity({
+          userId: auth.currentUser.uid,
+          type: "auth",
+          action: ActivityActionType.AUTH_LOGIN,
+          status: "unread", // Pastikan status unread agar muncul di notifikasi
+          targetId: auth.currentUser.uid,
+          targetName:
+            auth.currentUser.displayName || auth.currentUser.email || "User",
+          details: {
+            message: `${auth.currentUser.displayName || auth.currentUser.email} logged in.`,
+          },
+        });
+      }
     } catch (error: any) {
       if (error.code === "auth/invalid-credential") {
         setError("Invalid email or password");

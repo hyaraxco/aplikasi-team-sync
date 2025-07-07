@@ -7,6 +7,7 @@ interface PageHeaderProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  icon?: React.ReactNode;
 }
 
 export const PageHeader = ({
@@ -14,6 +15,7 @@ export const PageHeader = ({
   description,
   actionLabel,
   onAction,
+  icon,
 }: PageHeaderProps) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -26,7 +28,7 @@ export const PageHeader = ({
 
       {actionLabel && onAction && (
         <Button onClick={onAction}>
-          <Plus className="mr-2 h-4 w-4" />
+          {icon}
           {actionLabel}
         </Button>
       )}

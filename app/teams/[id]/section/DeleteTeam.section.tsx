@@ -10,14 +10,18 @@ import {
 import { Button } from "@/components/atomics/button";
 
 interface DeleteTeamDialogProps {
+  projectId: string;
+  teamId: string;
   isOpen: boolean;
   onClose: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   isLoading?: boolean;
-  teamName: string;
+  teamName?: string;
 }
 
 export function DeleteTeamDialog({
+  projectId,
+  teamId,
   isOpen,
   onClose,
   onDelete,

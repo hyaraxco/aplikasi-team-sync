@@ -55,7 +55,7 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
             <div className="flex items-center">
               <Clock className="mr-1.5 h-4 w-4 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Due: </span>
-              <span className="text-xs ml-1">
+              <span className="text-xs ml-1 font-medium">
                 {deadlineDate ? format(deadlineDate, "MMM d, yyyy") : "N/A"}
               </span>
             </div>

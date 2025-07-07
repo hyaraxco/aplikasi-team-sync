@@ -10,7 +10,11 @@ import { Button } from "@/components/atomics/button";
 import { Input } from "@/components/atomics/input";
 import { Label } from "@/components/atomics/label";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription } from "./molecules/Alert.molecule";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "./molecules/Alert.molecule";
 
 export function RegisterForm() {
   const [name, setName] = useState("");
@@ -19,10 +23,12 @@ export function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
 
     // Validate form
     if (password !== confirmPassword) {
@@ -53,9 +59,18 @@ export function RegisterForm() {
       await createUserData(user.uid, {
         email: user.email || "",
         displayName: name,
-        role: "user",
+        role: "employee",
+        status: "pending",
       });
 
+      // Tampilkan pesan sukses dan reset form
+      setSuccessMessage(
+        "Registration successful! Your account is awaiting admin approval. You will be notified once it is active."
+      );
+      setName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
       // Redirect is handled by the AuthProvider
     } catch (error: any) {
       if (error.code === "auth/email-already-in-use") {
@@ -66,9 +81,21 @@ export function RegisterForm() {
         setError("Failed to create account");
         console.error(error);
       }
-      setLoading(false);
     }
+    setLoading(false);
   };
+
+  if (successMessage) {
+    return (
+      <Alert variant="success">
+        <AlertTitle>Registration Submitted</AlertTitle>
+        <AlertDescription>{successMessage}</AlertDescription>
+        <Button onClick={() => setSuccessMessage("")} className="mt-4 w-full">
+          Back to Register
+        </Button>
+      </Alert>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

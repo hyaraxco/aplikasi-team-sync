@@ -1,0 +1,87 @@
+rules_version = "2";
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to get current user's role from Firestore
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserRole() == "admin";
+    }
+
+    // Users: All authenticated users can read all user documents (needed for displaying names, etc.)
+    // Only users can edit their own data, admins can edit anyone's data
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        request.auth.uid == userId || isAdmin()
+      );
+    }
+
+    // Projects: All authenticated users can read, only admins can write
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Tasks: All authenticated users can read, only admins can write
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Teams: All authenticated users can read, only admins can write
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Milestones: All authenticated users can read, only admins can write
+    match /projects/{projectId}/milestones/{milestoneId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Activities: All authenticated users can read and write
+    match /activities/{activityId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Payroll: All authenticated users can read and write
+    match /payroll/{payrollId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Attendance: Users can access their own records, admins can access all
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Earnings: Users can read their own earnings, only admins can create/modify
+    match /earnings/{earningId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
+
+

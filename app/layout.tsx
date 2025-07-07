@@ -5,14 +5,15 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { SidebarProvider } from "@/hooks/use-sidebar";
+// Import Ant Design styles
+import "antd/dist/reset.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TeamSync HRIS",
+  title: "Team Sync",
   description:
     "Professional HRIS web dashboard for managing projects, tasks, teams, attendance, and payroll",
-  generator: "v0.dev",
 };
 
 export default function RootLayout({

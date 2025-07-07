@@ -7,6 +7,7 @@ interface EmptyStateProps {
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  icon?: React.ReactNode;
 }
 
 export const EmptyState = ({
@@ -14,12 +15,11 @@ export const EmptyState = ({
   description,
   actionLabel,
   onAction,
+  icon,
 }: EmptyStateProps) => {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="rounded-full bg-muted p-6 mb-4">
-        <Users2 className="w-10 h-10 text-muted-foreground" />
-      </div>
+      <div className="rounded-full bg-muted p-6 mb-4">{icon}</div>
       <h2 className="text-lg font-medium mb-1">{title}</h2>
       <p className="text-muted-foreground mb-6 max-w-sm">{description}</p>
       {actionLabel && onAction && (
