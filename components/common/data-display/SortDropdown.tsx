@@ -1,7 +1,6 @@
-"use client";
+'use client'
 
-import React from "react";
-import { Button } from "@/components/atomics/button";
+import { Button } from '@/components/atomics/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -9,24 +8,24 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/molecules/dropdown-menu";
+} from '@/components/molecules/dropdown-menu'
 
 export interface SortOption<T extends string> {
-  id: T;
-  label: string;
+  id: T
+  label: string
 }
 
 interface SortDropdownProps<T extends string> {
-  sortField: T;
-  sortOptions: SortOption<T>[];
-  sortDirection: "asc" | "desc";
-  onSortFieldChange: (field: T) => void;
-  onSortDirectionChange: (direction: "asc" | "desc") => void;
-  triggerLabel?: string;
-  fieldLabel?: string;
-  directionLabel?: string;
-  ascendingLabel?: string;
-  descendingLabel?: string;
+  sortField: T
+  sortOptions: SortOption<T>[]
+  sortDirection: 'asc' | 'desc'
+  onSortFieldChange: (field: T) => void
+  onSortDirectionChange: (direction: 'asc' | 'desc') => void
+  triggerLabel?: string
+  fieldLabel?: string
+  directionLabel?: string
+  ascendingLabel?: string
+  descendingLabel?: string
 }
 
 /**
@@ -38,30 +37,30 @@ export function SortDropdown<T extends string>({
   sortDirection,
   onSortFieldChange,
   onSortDirectionChange,
-  triggerLabel = "Sort",
-  fieldLabel = "Sort by",
-  directionLabel = "Direction",
-  ascendingLabel = "Ascending",
-  descendingLabel = "Descending",
+  triggerLabel = 'Sort',
+  fieldLabel = 'Sort by',
+  directionLabel = 'Direction',
+  ascendingLabel = 'Ascending',
+  descendingLabel = 'Descending',
 }: SortDropdownProps<T>) {
   const getSelectedOption = () => {
-    const option = sortOptions.find((opt) => opt.id === sortField);
-    const directionText = sortDirection === "asc" ? "A-Z" : "Z-A";
-    return `${triggerLabel}: ${option?.label || ""} (${directionText})`;
-  };
+    const option = sortOptions.find(opt => opt.id === sortField)
+    const directionText = sortDirection === 'asc' ? 'A-Z' : 'Z-A'
+    return `${triggerLabel}: ${option?.label || ''} (${directionText})`
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant='outline' size='sm'>
           {getSelectedOption()}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align='end' className='w-48'>
         <DropdownMenuLabel>{fieldLabel}</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {sortOptions.map((option) => (
+        {sortOptions.map(option => (
           <DropdownMenuCheckboxItem
             key={option.id}
             checked={sortField === option.id}
@@ -75,19 +74,19 @@ export function SortDropdown<T extends string>({
         <DropdownMenuLabel>{directionLabel}</DropdownMenuLabel>
 
         <DropdownMenuCheckboxItem
-          checked={sortDirection === "asc"}
-          onCheckedChange={() => onSortDirectionChange("asc")}
+          checked={sortDirection === 'asc'}
+          onCheckedChange={() => onSortDirectionChange('asc')}
         >
           {ascendingLabel}
         </DropdownMenuCheckboxItem>
 
         <DropdownMenuCheckboxItem
-          checked={sortDirection === "desc"}
-          onCheckedChange={() => onSortDirectionChange("desc")}
+          checked={sortDirection === 'desc'}
+          onCheckedChange={() => onSortDirectionChange('desc')}
         >
           {descendingLabel}
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

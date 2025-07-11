@@ -1,31 +1,16 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { Button } from "@/components/atomics/Button.atomic";
+import { Button } from '@/components/atomics/Button.atomic'
+import { Input } from '@/components/atomics/Input.atomic'
+import { useAuth } from '@/components/auth-provider'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/molecules/Dialog.molecule";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/molecules/Select.molecule";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  updateTeamMemberDetails,
-  type TeamMember,
-  setTeamLeader,
-  getUserData,
-} from "@/lib/firestore";
+  DialogHeader,
+  DialogTitle,
+} from '@/components/molecules/Dialog.molecule'
 import {
   Form,
   FormControl,
@@ -34,45 +19,61 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/molecules/Form.molecule";
-import { Input } from "@/components/atomics/Input.atomic";
-import { addActivity, ActivityActionType } from "@/lib/firestore";
-import { serverTimestamp } from "firebase/firestore";
-import { useAuth } from "@/components/auth-provider";
-import { Loader2 } from "lucide-react";
+} from '@/components/molecules/Form.molecule'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/molecules/Select.molecule'
+import {
+  ActivityActionType,
+  addActivity,
+  getUserData,
+  setTeamLeader,
+  updateTeamMemberDetails,
+  type TeamMember,
+} from '@/lib/firestore'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { serverTimestamp } from 'firebase/firestore'
+import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
 
 const memberStatusOptions = [
-  { id: "active", label: "Active" },
-  { id: "inactive", label: "Inactive" },
-  { id: "on-leave", label: "On Leave" },
-];
+  { id: 'active', label: 'Active' },
+  { id: 'inactive', label: 'Inactive' },
+  { id: 'on-leave', label: 'On Leave' },
+]
 
 const editMemberFormSchema = z.object({
   role: z.string().min(1, {
-    message: "Please select a role",
+    message: 'Please select a role',
   }),
   status: z.string().min(1, {
-    message: "Please select a status",
+    message: 'Please select a status',
   }),
-});
+})
 
-type EditMemberFormData = z.infer<typeof editMemberFormSchema>;
+type EditMemberFormData = z.infer<typeof editMemberFormSchema>
 
 interface EditMemberDialogProps {
-  teamId: string;
-  memberData?: TeamMemberWithData;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onMemberUpdated: () => void;
-  teamLeadId?: string; // userId leader saat ini
-  onFullTeamRefresh?: () => void;
+  teamId: string
+  memberData?: TeamMemberWithData
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  onMemberUpdated: () => void
+  teamLeadId?: string // userId leader saat ini
+  onFullTeamRefresh?: () => void
 }
 
 interface TeamMemberWithData extends TeamMember {
   userData?: {
-    displayName?: string;
-    email?: string;
-  };
+    displayName?: string
+    email?: string
+  }
 }
 
 export function EditMemberDialog({
@@ -84,30 +85,30 @@ export function EditMemberDialog({
   teamLeadId,
   onFullTeamRefresh,
 }: EditMemberDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSettingLeader, setIsSettingLeader] = useState(false);
-  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSettingLeader, setIsSettingLeader] = useState(false)
+  const { user } = useAuth()
 
   const form = useForm<EditMemberFormData>({
     resolver: zodResolver(editMemberFormSchema),
     defaultValues: {
-      role: memberData?.role || "",
-      status: memberData?.status || "active",
+      role: memberData?.role || '',
+      status: memberData?.status || 'active',
     },
-  });
+  })
 
   const onSubmit = async (data: EditMemberFormData) => {
-    if (!memberData) return;
-    setIsSubmitting(true);
+    if (!memberData) return
+    setIsSubmitting(true)
     try {
       await updateTeamMemberDetails(teamId, memberData.userId, {
         role: data.role,
-        status: data?.status || "active",
-      });
+        status: data?.status || 'active',
+      })
       if (user) {
         await addActivity({
           userId: user.uid,
-          type: "team",
+          type: 'team',
           action: ActivityActionType.TEAM_MEMBER_DETAILS_UPDATED,
           targetId: teamId,
           targetName: teamId,
@@ -116,34 +117,32 @@ export function EditMemberDialog({
           details: {
             updatedUserId: memberData.userId,
             updatedUserName:
-              memberData.userData?.displayName ||
-              memberData.userData?.email ||
-              memberData.userId,
+              memberData.userData?.displayName || memberData.userData?.email || memberData.userId,
             updatedUserRole: data.role,
             updatedUserStatus: data.status,
           },
-        });
+        })
       }
-      onMemberUpdated();
-      onOpenChange(false);
+      onMemberUpdated()
+      onOpenChange(false)
     } catch (error) {
       // Error handling bisa ditambah jika ingin
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleSetAsLeader = async () => {
-    if (!memberData) return;
-    setIsSettingLeader(true);
+    if (!memberData) return
+    setIsSettingLeader(true)
     try {
-      const userData = await getUserData(memberData.userId);
-      if (!userData) throw new Error("User data not found");
-      await setTeamLeader(teamId, memberData, userData);
+      const userData = await getUserData(memberData.userId)
+      if (!userData) throw new Error('User data not found')
+      await setTeamLeader(teamId, memberData, userData)
       if (user) {
         await addActivity({
           userId: user.uid,
-          type: "team",
+          type: 'team',
           action: ActivityActionType.TEAM_LEAD_CHANGED,
           targetId: teamId,
           targetName: teamId,
@@ -152,23 +151,21 @@ export function EditMemberDialog({
           details: {
             newLeadUserId: memberData.userId,
             newLeadUserName:
-              memberData.userData?.displayName ||
-              memberData.userData?.email ||
-              memberData.userId,
+              memberData.userData?.displayName || memberData.userData?.email || memberData.userId,
           },
-        });
+        })
       }
       if (onFullTeamRefresh) {
-        onFullTeamRefresh();
+        onFullTeamRefresh()
       } else {
-        onMemberUpdated();
+        onMemberUpdated()
       }
-      onOpenChange(false);
+      onOpenChange(false)
     } catch (err) {
       // Error handling bisa ditambah jika ingin
     }
-    setIsSettingLeader(false);
-  };
+    setIsSettingLeader(false)
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -176,27 +173,23 @@ export function EditMemberDialog({
         <DialogHeader>
           <DialogTitle>Edit Team Member</DialogTitle>
           <DialogDescription>
-            Update the details for{" "}
+            Update the details for{' '}
             {memberData?.userData?.displayName || memberData?.userData?.email}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
             <FormField
               control={form.control}
-              name="role"
+              name='role'
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g: Developer, Designer, etc."
-                      {...field}
-                    />
+                    <Input placeholder='e.g: Developer, Designer, etc.' {...field} />
                   </FormControl>
                   <FormDescription>
-                    Specify the primary role or position of this member within
-                    the team.
+                    Specify the primary role or position of this member within the team.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -205,21 +198,18 @@ export function EditMemberDialog({
 
             <FormField
               control={form.control}
-              name="status"
+              name='status'
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a status" />
+                        <SelectValue placeholder='Select a status' />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {memberStatusOptions.map((option) => (
+                      {memberStatusOptions.map(option => (
                         <SelectItem key={option.id} value={option.id}>
                           {option.label}
                         </SelectItem>
@@ -227,8 +217,7 @@ export function EditMemberDialog({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Select the current working status of this team member within
-                    the organization.
+                    Select the current working status of this team member within the organization.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -236,40 +225,36 @@ export function EditMemberDialog({
             />
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type='submit' disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                    <Loader2 className='mr-2 w-4 h-4 animate-spin' />
                     Updating
                   </>
                 ) : (
-                  "Update"
+                  'Update'
                 )}
               </Button>
             </DialogFooter>
             {/* Set as Leader Button */}
             {teamLeadId !== memberData?.userId && (
               <Button
-                type="button"
-                variant="secondary"
-                className="w-full mt-2"
+                type='button'
+                variant='secondary'
+                className='w-full mt-2'
                 onClick={handleSetAsLeader}
                 disabled={isSettingLeader}
               >
                 {isSettingLeader ? (
                   <>
-                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                    <Loader2 className='mr-2 w-4 h-4 animate-spin' />
                     Setting as Leader
                   </>
                 ) : (
-                  "Set as Leader"
+                  'Set as Leader'
                 )}
               </Button>
             )}
@@ -277,5 +262,5 @@ export function EditMemberDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

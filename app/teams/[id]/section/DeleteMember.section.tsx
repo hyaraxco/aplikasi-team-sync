@@ -1,24 +1,24 @@
-"use client";
+'use client'
 
+import { Button } from '@/components/atomics/Button.atomic'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/molecules/Dialog.molecule";
-import { Button } from "@/components/atomics/Button.atomic";
-import type { EnrichedTeamMember } from "./MemberTable.section";
-import { Spinner } from "@/components/ui/spinner";
+  DialogHeader,
+  DialogTitle,
+} from '@/components/molecules/Dialog.molecule'
+import { Spinner } from '@/components/ui/spinner'
+import type { EnrichedTeamMember } from './MemberTable.section'
 
 interface DeleteMemberDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  member: EnrichedTeamMember | null;
-  onDelete: () => void;
-  isLoading?: boolean;
-  errorMessage?: string;
+  isOpen: boolean
+  onClose: () => void
+  member: EnrichedTeamMember | null
+  onDelete: () => void
+  isLoading?: boolean
+  errorMessage?: string
 }
 
 export function DeleteMemberDialog({
@@ -32,41 +32,37 @@ export function DeleteMemberDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader className="gap-2">
+        <DialogHeader className='gap-2'>
           <DialogTitle>Remove Member from Team</DialogTitle>
           <DialogDescription>
             {errorMessage ? (
-              <span className="text-red-500 font-semibold">{errorMessage}</span>
+              <span className='text-red-500 font-semibold'>{errorMessage}</span>
             ) : (
               <>
-                Are you sure you want to remove{" "}
-                <b>{member?.userData?.displayName}</b> from the team?
+                Are you sure you want to remove <b>{member?.userData?.displayName}</b> from the
+                team?
               </>
             )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant='outline' onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
           {!errorMessage && (
-            <Button
-              variant="destructive"
-              onClick={onDelete}
-              disabled={isLoading}
-            >
+            <Button variant='destructive' onClick={onDelete} disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Spinner className="mr-2 w-4 h-4" />
+                  <Spinner className='mr-2 w-4 h-4' />
                   Removing...
                 </>
               ) : (
-                "Remove"
+                'Remove'
               )}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

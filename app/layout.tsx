@@ -1,32 +1,32 @@
-import type React from "react";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/components/auth-provider";
-import { SidebarProvider } from "@/hooks/use-sidebar";
+import { AuthProvider } from '@/components/auth-provider'
+import { ThemeProvider } from '@/components/theme-provider'
+import { SidebarProvider } from '@/hooks/use-sidebar'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import type React from 'react'
+import './globals.css'
 // Import Ant Design styles
-import "antd/dist/reset.css";
+import 'antd/dist/reset.css'
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "Team Sync",
+  title: 'Team Sync',
   description:
-    "Professional HRIS web dashboard for managing projects, tasks, teams, attendance, and payroll",
-};
+    'Professional HRIS web dashboard for managing projects, tasks, teams, attendance, and payroll',
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang='en' suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
+          attribute='class'
+          defaultTheme='system'
           enableSystem
           disableTransitionOnChange
         >
@@ -36,5 +36,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  );
+  )
 }

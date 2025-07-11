@@ -22,30 +22,30 @@
  * @since 1.0.0
  */
 
-import type React from 'react';
 import {
-  ClipboardList,
-  DollarSign,
-  Briefcase,
-  Users,
-  Clock,
-  UserCircle,
   AlertCircle,
-  KeyRound,
+  Briefcase,
+  ClipboardList,
+  Clock,
   Coins,
-} from 'lucide-react';
-import type { ActivityType } from './firestore';
+  DollarSign,
+  KeyRound,
+  UserCircle,
+  Users,
+} from 'lucide-react'
+import type React from 'react'
+import type { ActivityType } from './firestore'
 
 /**
  * Configuration interface for notification type styling
  */
 export interface NotificationTypeStyle {
   /** React component for the icon */
-  icon: React.ElementType;
+  icon: React.ElementType
   /** Tailwind CSS class for dot color */
-  dotColor: string;
+  dotColor: string
   /** Optional title prefix for the notification */
-  titlePrefix?: string;
+  titlePrefix?: string
 }
 
 /**
@@ -57,73 +57,70 @@ export interface NotificationTypeStyle {
  * - A Tailwind CSS background color class for status dots
  * - An optional title prefix for display
  */
-export const notificationTypeStyles: Record<
-  ActivityType | "default",
-  NotificationTypeStyle
-> = {
+export const notificationTypeStyles: Record<ActivityType | 'default', NotificationTypeStyle> = {
   /** Task-related activities */
   task: {
     icon: ClipboardList,
-    dotColor: "bg-yellow-500",
-    titlePrefix: "Task"
+    dotColor: 'bg-yellow-500',
+    titlePrefix: 'Task',
   },
 
   /** Payroll and compensation activities */
   payroll: {
     icon: DollarSign,
-    dotColor: "bg-blue-500",
-    titlePrefix: "Payroll"
+    dotColor: 'bg-blue-500',
+    titlePrefix: 'Payroll',
   },
 
   /** Project management activities */
   project: {
     icon: Briefcase,
-    dotColor: "bg-green-500",
-    titlePrefix: "Project"
+    dotColor: 'bg-green-500',
+    titlePrefix: 'Project',
   },
 
   /** Team collaboration activities */
   team: {
     icon: Users,
-    dotColor: "bg-purple-500",
-    titlePrefix: "Team"
+    dotColor: 'bg-purple-500',
+    titlePrefix: 'Team',
   },
 
   /** Attendance and time tracking activities */
   attendance: {
     icon: Clock,
-    dotColor: "bg-orange-500",
-    titlePrefix: "Attendance"
+    dotColor: 'bg-orange-500',
+    titlePrefix: 'Attendance',
   },
 
   /** User account and profile activities */
   user: {
     icon: UserCircle,
-    dotColor: "bg-indigo-500",
-    titlePrefix: "User"
+    dotColor: 'bg-indigo-500',
+    titlePrefix: 'User',
   },
 
   /** Authentication and security activities */
   auth: {
     icon: KeyRound,
-    dotColor: "bg-cyan-500",
-    titlePrefix: "Auth"
+    dotColor: 'bg-cyan-500',
+    titlePrefix: 'Auth',
   },
 
   /** Earnings and financial activities */
   earning: {
     icon: Coins,
-    dotColor: "bg-emerald-500",
-    titlePrefix: "Earning"
+    dotColor: 'bg-emerald-500',
+    titlePrefix: 'Earning',
   },
 
   /** Default fallback for unknown activity types */
   default: {
     icon: AlertCircle,
-    dotColor: "bg-gray-500",
-    titlePrefix: "Notification"
+    dotColor: 'bg-gray-500',
+    titlePrefix: 'Notification',
   },
-};
+}
 
 /**
  * Get notification style configuration for a specific activity type
@@ -141,7 +138,7 @@ export const notificationTypeStyles: Record<
 export function getNotificationTypeStyle(
   activityType: ActivityType | string
 ): NotificationTypeStyle {
-  return notificationTypeStyles[activityType as ActivityType] || notificationTypeStyles.default;
+  return notificationTypeStyles[activityType as ActivityType] || notificationTypeStyles.default
 }
 
 /**
@@ -156,13 +153,13 @@ export function getNotificationTypeStyle(
  * ```
  */
 export function getAllNotificationTypeStyles(): Array<{
-  type: ActivityType | "default";
-  style: NotificationTypeStyle;
+  type: ActivityType | 'default'
+  style: NotificationTypeStyle
 }> {
   return Object.entries(notificationTypeStyles).map(([type, style]) => ({
-    type: type as ActivityType | "default",
+    type: type as ActivityType | 'default',
     style,
-  }));
+  }))
 }
 
 /**
@@ -176,13 +173,10 @@ export function getAllNotificationTypeStyles(): Array<{
  * // Returns: { task: "bg-yellow-500", payroll: "bg-blue-500", ... }
  * ```
  */
-export function getNotificationDotColors(): Record<ActivityType | "default", string> {
+export function getNotificationDotColors(): Record<ActivityType | 'default', string> {
   return Object.fromEntries(
-    Object.entries(notificationTypeStyles).map(([type, style]) => [
-      type,
-      style.dotColor,
-    ])
-  ) as Record<ActivityType | "default", string>;
+    Object.entries(notificationTypeStyles).map(([type, style]) => [type, style.dotColor])
+  ) as Record<ActivityType | 'default', string>
 }
 
 /**
@@ -196,11 +190,11 @@ export function getNotificationDotColors(): Record<ActivityType | "default", str
  * // Returns: { task: "Task", payroll: "Payroll", ... }
  * ```
  */
-export function getNotificationTitlePrefixes(): Record<ActivityType | "default", string> {
+export function getNotificationTitlePrefixes(): Record<ActivityType | 'default', string> {
   return Object.fromEntries(
     Object.entries(notificationTypeStyles).map(([type, style]) => [
       type,
-      style.titlePrefix || "Notification",
+      style.titlePrefix || 'Notification',
     ])
-  ) as Record<ActivityType | "default", string>;
+  ) as Record<ActivityType | 'default', string>
 }

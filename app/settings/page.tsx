@@ -1,5 +1,5 @@
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { SettingsContent } from "@/components/settings-content"
+import { DashboardLayout } from '@/components/dashboard-layout'
+import { SettingsContent } from '@/components/settings-content'
 
 export default function SettingsPage() {
   return (

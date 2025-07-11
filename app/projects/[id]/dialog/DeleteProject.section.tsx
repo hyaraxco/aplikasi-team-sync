@@ -1,20 +1,20 @@
-"use client";
+'use client'
 
+import { Button } from '@/components/atomics/button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/molecules/dialog";
-import { Button } from "@/components/atomics/button";
+} from '@/components/molecules/dialog'
 
 interface DeleteProjectDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onDelete: () => void;
-  isLoading?: boolean;
-  projectName: string;
+  isOpen: boolean
+  onClose: () => void
+  onDelete: () => void
+  isLoading?: boolean
+  projectName: string
 }
 
 export function DeleteProjectDialog({
@@ -30,25 +30,25 @@ export function DeleteProjectDialog({
         <DialogHeader>
           <DialogTitle>Delete Project</DialogTitle>
         </DialogHeader>
-        <div className="py-2">
-          <p className="mb-2">
-            Are you sure you want to delete project{" "}
-            <span className="font-semibold">{projectName}</span>?
+        <div className='py-2'>
+          <p className='mb-2'>
+            Are you sure you want to delete project{' '}
+            <span className='font-semibold'>{projectName}</span>?
           </p>
-          <p className="text-sm text-red-500">
-            This action cannot be undone. All data related to this project will
-            be permanently deleted.
+          <p className='text-sm text-red-500'>
+            This action cannot be undone. All data related to this project will be permanently
+            deleted.
           </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant='outline' onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onDelete} disabled={isLoading}>
+          <Button variant='destructive' onClick={onDelete} disabled={isLoading}>
             Delete
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

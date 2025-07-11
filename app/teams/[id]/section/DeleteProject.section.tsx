@@ -1,24 +1,24 @@
-"use client";
+'use client'
 
+import { Button } from '@/components/atomics/Button.atomic'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/molecules/Dialog.molecule";
-import { Button } from "@/components/atomics/Button.atomic";
-import type { Project } from "@/lib/firestore";
-import { Spinner } from "@/components/ui/spinner";
+  DialogHeader,
+  DialogTitle,
+} from '@/components/molecules/Dialog.molecule'
+import { Spinner } from '@/components/ui/spinner'
+import type { Project } from '@/lib/firestore'
 
 interface DeleteProjectDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  project: Project | null;
-  onDelete: () => void;
-  isLoading?: boolean;
-  teamName: string;
+  isOpen: boolean
+  onClose: () => void
+  project: Project | null
+  onDelete: () => void
+  isLoading?: boolean
+  teamName: string
 }
 
 export function DeleteProjectDialog({
@@ -32,29 +32,29 @@ export function DeleteProjectDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader className="gap-2">
+        <DialogHeader className='gap-2'>
           <DialogTitle>Remove Project from Team</DialogTitle>
           <DialogDescription>
-            Are you sure you want to remove the project <b>{project?.name}</b>{" "}
-            from the team <b>{teamName}</b>?
+            Are you sure you want to remove the project <b>{project?.name}</b> from the team{' '}
+            <b>{teamName}</b>?
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant='outline' onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onDelete} disabled={isLoading}>
+          <Button variant='destructive' onClick={onDelete} disabled={isLoading}>
             {isLoading ? (
               <>
-                <Spinner className="mr-2 w-4 h-4" />
+                <Spinner className='mr-2 w-4 h-4' />
                 Removing...
               </>
             ) : (
-              "Remove"
+              'Remove'
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
