@@ -1,22 +1,22 @@
-"use client";
+'use client'
 
+import { Button } from '@/components/atomics/button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/molecules/dialog";
-import { Button } from "@/components/atomics/button";
+} from '@/components/molecules/dialog'
 
 interface DeleteTeamDialogProps {
-  projectId: string;
-  teamId: string;
-  isOpen: boolean;
-  onClose: () => void;
-  onDelete?: () => void;
-  isLoading?: boolean;
-  teamName?: string;
+  projectId: string
+  teamId: string
+  isOpen: boolean
+  onClose: () => void
+  onDelete?: () => void
+  isLoading?: boolean
+  teamName?: string
 }
 
 export function DeleteTeamDialog({
@@ -34,25 +34,25 @@ export function DeleteTeamDialog({
         <DialogHeader>
           <DialogTitle>Delete Team</DialogTitle>
         </DialogHeader>
-        <div className="py-2">
-          <p className="mb-2">
-            Apakah Anda yakin ingin menghapus team{" "}
-            <span className="font-semibold">{teamName}</span>?
+        <div className='py-2'>
+          <p className='mb-2'>
+            Apakah Anda yakin ingin menghapus team <span className='font-semibold'>{teamName}</span>
+            ?
           </p>
-          <p className="text-sm text-red-500">
-            Tindakan ini tidak dapat dibatalkan. Semua data terkait team ini
-            akan dihapus secara permanen.
+          <p className='text-sm text-red-500'>
+            Tindakan ini tidak dapat dibatalkan. Semua data terkait team ini akan dihapus secara
+            permanen.
           </p>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant='outline' onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onDelete} disabled={isLoading}>
+          <Button variant='destructive' onClick={onDelete} disabled={isLoading}>
             Delete
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

@@ -1,33 +1,30 @@
-import FilterBar, {
-  FilterOption,
-  SortOption,
-} from "@/components/common/data-display/FilterBar";
+import FilterBar, { FilterOption, SortOption } from '@/components/common/data-display/FilterBar'
 
 interface NotifFilterBarProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  filters: Record<string, string[]>;
-  onFilterChange: (type: string, value: string) => void;
-  sortField: string;
-  sortDirection: "asc" | "desc";
-  onSortFieldChange: (field: string) => void;
-  onSortDirectionChange: (direction: "asc" | "desc") => void;
-  onClearFilters: () => void;
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  filters: Record<string, string[]>
+  onFilterChange: (type: string, value: string) => void
+  sortField: string
+  sortDirection: 'asc' | 'desc'
+  onSortFieldChange: (field: string) => void
+  onSortDirectionChange: (direction: 'asc' | 'desc') => void
+  onClearFilters: () => void
 }
 
 const CATEGORY_FILTER_OPTIONS: FilterOption[] = [
-  { id: "project", label: "Project" },
-  { id: "task", label: "Task" },
-  { id: "team", label: "Team" },
-  { id: "attendance", label: "Attendance" },
-  { id: "payroll", label: "Payroll" },
-  { id: "user", label: "User" },
-];
+  { id: 'project', label: 'Project' },
+  { id: 'task', label: 'Task' },
+  { id: 'team', label: 'Team' },
+  { id: 'attendance', label: 'Attendance' },
+  { id: 'payroll', label: 'Payroll' },
+  { id: 'user', label: 'User' },
+]
 
 const SORT_OPTIONS: SortOption[] = [
-  { id: "timestamp", label: "Date" },
-  { id: "type", label: "Category" },
-];
+  { id: 'timestamp', label: 'Date' },
+  { id: 'type', label: 'Category' },
+]
 
 export default function NotifFilterBar({
   searchTerm,
@@ -43,7 +40,7 @@ export default function NotifFilterBar({
   const filterOptions = {
     category: CATEGORY_FILTER_OPTIONS,
     // Bisa tambahkan filter tanggal jika ingin, misal fromDate/toDate (tapi perlu komponen date picker terpisah)
-  };
+  }
 
   return (
     <FilterBar
@@ -59,5 +56,5 @@ export default function NotifFilterBar({
       onSortDirectionChange={onSortDirectionChange}
       onClearFilters={onClearFilters}
     />
-  );
+  )
 }

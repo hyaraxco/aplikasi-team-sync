@@ -13,8 +13,7 @@
  *   cn,
  *   getStatusBadge,
  *   UserData,
- *   createProject,
- *   AVAILABLE_TEAM_ROLES
+ *   createProject
  * } from '@/lib/helpers';
  *
  * // Use in component
@@ -37,7 +36,7 @@
  * - `getPriorityBadge()` - Project priority badge configuration
  * - Currency input parsing and formatting utilities
  */
-export * from './utils';
+export * from './utils'
 
 /**
  * Activity message formatting utilities
@@ -51,17 +50,16 @@ export * from './utils';
  * // Returns: "John Doe created project: New Website"
  * ```
  */
-export * from './activity-formatter';
+export * from './activity-formatter'
 
 /**
  * Application constants and enums
  *
  * @description Includes:
- * - `AVAILABLE_TEAM_ROLES` - Available team member roles
  * - `MEMBER_STATUS` - Member status constants
  * - Type definitions for roles and statuses
  */
-export * from './constants';
+export * from './constants'
 
 /**
  * Firebase configuration and instances
@@ -77,7 +75,7 @@ export * from './constants';
  * const docRef = doc(db, 'users', userId);
  * ```
  */
-export { auth, db, secondaryAuth } from './firebase';
+export { auth, db, secondaryAuth } from './firebase'
 
 /**
  * Firestore type definitions
@@ -98,39 +96,39 @@ export { auth, db, secondaryAuth } from './firebase';
  * ```
  */
 export type {
-  /** User account data structure */
-  UserData,
-  /** User role enumeration: 'admin' | 'employee' */
-  UserRole,
-  /** Project data structure with status and priority */
-  Project,
-  /** Project status: 'planning' | 'in-progress' | 'completed' | 'on-hold' */
-  ProjectStatus,
-  /** Project priority: 'low' | 'medium' | 'high' */
-  ProjectPriority,
-  /** Task data structure with assignments and comments */
-  Task,
-  /** Task status: 'backlog' | 'in_progress' | 'completed' | 'revision' | 'done' | 'blocked' */
-  TaskStatus,
-  /** Task priority: 'low' | 'medium' | 'high' */
-  TaskPriority,
-  /** Team data structure with members and roles */
-  Team,
-  /** Team member data with role and status */
-  TeamMember,
-  /** Attendance record with check-in/out times */
-  AttendanceRecord,
-  /** Payroll record with earnings and status */
-  Payroll,
-  /** Payroll status: 'pending' | 'processing' | 'paid' | 'failed' */
-  PayrollStatus,
   /** Activity log entry for audit trail */
   Activity,
   /** Activity type categorization */
   ActivityType,
+  /** Attendance record with check-in/out times */
+  AttendanceRecord,
   /** Earnings record for task/attendance compensation */
-  Earning
-} from './firestore';
+  Earning,
+  /** Payroll record with earnings and status */
+  Payroll,
+  /** Payroll status: 'pending' | 'processing' | 'paid' | 'failed' */
+  PayrollStatus,
+  /** Project data structure with status and priority */
+  Project,
+  /** Project priority: 'low' | 'medium' | 'high' */
+  ProjectPriority,
+  /** Project status: 'planning' | 'in-progress' | 'completed' | 'on-hold' */
+  ProjectStatus,
+  /** Task data structure with assignments and comments */
+  Task,
+  /** Task priority: 'low' | 'medium' | 'high' */
+  TaskPriority,
+  /** Task status: 'backlog' | 'in_progress' | 'completed' | 'revision' | 'done' | 'blocked' */
+  TaskStatus,
+  /** Team data structure with members and roles */
+  Team,
+  /** Team member data with role and status */
+  TeamMember,
+  /** User account data structure */
+  UserData,
+  /** User role enumeration: 'admin' | 'employee' */
+  UserRole
+} from './firestore'
 
 /**
  * Firestore database operations
@@ -157,53 +155,69 @@ export type {
  * ```
  */
 export {
-  /** User management functions */
-  getUserData,        // Fetch single user by ID
-  getUsers,          // Fetch all users (admin only)
-  createUserData,    // Create new user record
-  updateUserData,    // Update existing user
+  /** Enums and constants */
+  ActivityActionType, // Fetch recent activity logs
+  addActivity, // Submit task for admin review
+  approveTask, // Fetch attendance records
+  checkIn, // Record check-in time
+  checkOut, // Fetch all projects
+  createProject, // Fetch tasks with filtering
+  createTask, // Fetch all teams
+  createTeam, // Fetch all users (admin only)
+  createUserData, // Update existing project
+  deleteProject, // Update team details
+  deleteTeam, // Delete team (admin only)
 
-  /** Project management functions */
-  getProjects,       // Fetch all projects
-  createProject,     // Create new project
-  updateProject,     // Update existing project
-  deleteProject,     // Delete project (admin only)
 
-  /** Task management functions */
-  getTasks,              // Fetch tasks with filtering
-  createTask,            // Create new task
-  updateTask,            // Update existing task
-  submitTaskForReview,   // Submit task for admin review
-  approveTask,           // Approve completed task
-  requestTaskRevision,   // Request task revision
-  getTeamTasks,          // Get tasks for specific team
 
-  /** Team management functions */
-  getTeams,          // Fetch all teams
-  createTeam,        // Create new team
-  updateTeam,        // Update team details
-  deleteTeam,        // Delete team (admin only)
 
   /** Attendance tracking functions */
-  getAttendanceRecords,  // Fetch attendance records
-  checkIn,              // Record check-in time
-  checkOut,             // Record check-out time
+  getAttendanceRecords, // Record check-out time
+
+
+
 
   /** Payroll management functions */
-  getPayrollRecords,    // Fetch payroll data
+  getPayrollRecords, // Update existing user
+
+
+
+
+  /** Project management functions */
+  getProjects, // Fetch payroll data
+
+
+
 
   /** Activity logging functions */
-  getRecentActivities,  // Fetch recent activity logs
-  addActivity,          // Log new activity
+  getRecentActivities, // Delete project (admin only)
+
+
+
+
+  /** Task management functions */
+  getTasks, // Get tasks for specific team
+  /** Team management functions */
+  getTeams, // Request task revision
+  getTeamTasks,
+  /** User management functions */
+  getUserData, // Fetch single user by ID
+  getUsers, // Approve completed task
+  requestTaskRevision, // Update existing task
+  submitTaskForReview, // Real-time earnings for user
+  subscribeAllEarnings, // Log new activity
+
+
+
 
   /** Earnings tracking functions */
-  subscribeEarningsByUserId,  // Real-time earnings for user
-  subscribeAllEarnings,       // Real-time all earnings (admin)
-
-  /** Enums and constants */
-  ActivityActionType,         // Activity action type enum
-  Timestamp                   // Firestore Timestamp
-} from './firestore';
+  subscribeEarningsByUserId, // Activity action type enum
+  Timestamp, // Create new project
+  updateProject, // Create new task
+  updateTask, // Create new team
+  updateTeam, // Create new user record
+  updateUserData
+} from './firestore'
 
 /**
  * Notification UI configuration
@@ -219,4 +233,4 @@ export {
  * // Returns: { icon: ClipboardList, dotColor: "bg-yellow-500", titlePrefix: "Task" }
  * ```
  */
-export * from './notification-styles';
+export * from './notification-styles'

@@ -36,7 +36,7 @@
  * return isMobile ? <MobileLayout /> : <DesktopLayout />;
  * ```
  */
-export { useIsMobile } from './use-mobile';
+export { useIsMobile } from './use-mobile'
 
 /**
  * Sidebar state management hook and provider
@@ -45,16 +45,7 @@ export { useIsMobile } from './use-mobile';
  * route-based closing on mobile devices.
  *
  * @example
- * ```typescript
- * // In app layout
- * <SidebarProvider>
- *   <App />
- * </SidebarProvider>
- *
- * // In component
- * const { isOpen, toggleSidebar } = useSidebar();
- * ```
- */
+
 export { useSidebar, SidebarProvider } from './use-sidebar';
 
 /**
@@ -74,7 +65,7 @@ export { useSidebar, SidebarProvider } from './use-sidebar';
  * });
  * ```
  */
-export { useToast, toast } from './use-toast';
+export { toast, useToast } from './use-toast'
 
 /**
  * Real-time earnings data subscription hook
@@ -90,7 +81,7 @@ export { useToast, toast } from './use-toast';
  * const totalEarnings = earnings.reduce((sum, e) => sum + e.amount, 0);
  * ```
  */
-export { useEarnings } from './use-earnings';
+export { useEarnings } from './use-earnings'
 
 /**
  * User permission checking hook
@@ -109,11 +100,11 @@ export { useEarnings } from './use-earnings';
  * }
  * ```
  */
-export { usePermission } from './usePermission';
+export { usePermission } from './use-permission'
 
 /**
  * Type definitions for toast notifications
  *
  * @description TypeScript type for toast configuration objects
  */
-export type { ToasterToast } from './use-toast';
+export type { ToasterToast } from './use-toast'

@@ -1,46 +1,46 @@
 /**
  * @fileoverview Type definitions for filtering and sorting functionality
- * 
+ *
  * This module contains type definitions for filter states, actions, and
  * related functionality used throughout the application for data filtering
  * and sorting operations.
- * 
+ *
  * @author Team Sync Development Team
  * @since 1.0.0
  */
 
 /**
  * Generic filter state interface
- * 
+ *
  * @template T - The type of items being filtered
  */
 export interface FilterState<T = any> {
   /** Current search term */
-  searchTerm: string;
+  searchTerm: string
   /** Active filters grouped by type */
-  filters: Record<string, string[]>;
+  filters: Record<string, string[]>
   /** Field to sort by */
-  sortField: keyof T;
+  sortField: keyof T
   /** Sort direction */
-  sortDirection: 'asc' | 'desc';
+  sortDirection: 'asc' | 'desc'
 }
 
 /**
  * Filter actions interface for managing filter state
- * 
+ *
  * @template T - The type of items being filtered
  */
 export interface FilterActions<T = any> {
   /** Set the search term */
-  setSearchTerm: (term: string) => void;
+  setSearchTerm: (term: string) => void
   /** Toggle a filter value */
-  toggleFilter: (type: string, value: string) => void;
+  toggleFilter: (type: string, value: string) => void
   /** Clear all filters and search */
-  clearFilters: () => void;
+  clearFilters: () => void
   /** Handle sorting by field */
-  handleSort: (field: keyof T) => void;
+  handleSort: (field: keyof T) => void
   /** Set sort direction */
-  setSortDirection: (direction: 'asc' | 'desc') => void;
+  setSortDirection: (direction: 'asc' | 'desc') => void
 }
 
 /**
@@ -48,27 +48,27 @@ export interface FilterActions<T = any> {
  */
 export interface FilterOption {
   /** Unique identifier */
-  id: string;
+  id: string
   /** Display label */
-  label: string;
+  label: string
   /** Optional description */
-  description?: string;
+  description?: string
   /** Whether option is disabled */
-  disabled?: boolean;
+  disabled?: boolean
 }
 
 /**
  * Sort option for sort dropdowns
- * 
+ *
  * @template T - The field type (usually string)
  */
 export interface SortOption<T = string> {
   /** Field identifier */
-  id: T;
+  id: T
   /** Display label */
-  label: string;
+  label: string
   /** Optional description */
-  description?: string;
+  description?: string
 }
 
 /**
@@ -76,62 +76,62 @@ export interface SortOption<T = string> {
  */
 export interface FilterConfig {
   /** Filter type identifier */
-  type: string;
+  type: string
   /** Display label */
-  label: string;
+  label: string
   /** Available options */
-  options: FilterOption[];
+  options: FilterOption[]
   /** Whether multiple selection is allowed */
-  multiple?: boolean;
+  multiple?: boolean
   /** Default selected values */
-  defaultValues?: string[];
+  defaultValues?: string[]
 }
 
 /**
  * Complete filter bar configuration
- * 
+ *
  * @template T - The type of items being filtered
  */
 export interface FilterBarConfig<T = any> {
   /** Search configuration */
   search?: {
-    placeholder?: string;
-    enabled?: boolean;
-  };
+    placeholder?: string
+    enabled?: boolean
+  }
   /** Available filters */
-  filters?: FilterConfig[];
+  filters?: FilterConfig[]
   /** Available sort options */
-  sortOptions?: SortOption<keyof T>[];
+  sortOptions?: SortOption<keyof T>[]
   /** Default sort field */
-  defaultSortField?: keyof T;
+  defaultSortField?: keyof T
   /** Default sort direction */
-  defaultSortDirection?: 'asc' | 'desc';
+  defaultSortDirection?: 'asc' | 'desc'
 }
 
 /**
  * Filter result with metadata
- * 
+ *
  * @template T - The type of filtered items
  */
 export interface FilterResult<T = any> {
   /** Filtered items */
-  items: T[];
+  items: T[]
   /** Total count before filtering */
-  totalCount: number;
+  totalCount: number
   /** Count after filtering */
-  filteredCount: number;
+  filteredCount: number
   /** Applied filters summary */
   appliedFilters: {
-    searchTerm?: string;
-    filters: Record<string, string[]>;
-    sortField: keyof T;
-    sortDirection: 'asc' | 'desc';
-  };
+    searchTerm?: string
+    filters: Record<string, string[]>
+    sortField: keyof T
+    sortDirection: 'asc' | 'desc'
+  }
 }
 
 /**
  * Hook return type for filter functionality
- * 
+ *
  * @template T - The type of items being filtered
  */
 export type UseFilterReturn<T = any> = [
@@ -140,13 +140,13 @@ export type UseFilterReturn<T = any> = [
   /** Current filter state */
   FilterState<T>,
   /** Filter actions */
-  FilterActions<T>
-];
+  FilterActions<T>,
+]
 
 /**
  * Predefined filter types for common use cases
  */
-export type CommonFilterTypes = 
+export type CommonFilterTypes =
   | 'status'
   | 'priority'
   | 'role'
@@ -155,17 +155,17 @@ export type CommonFilterTypes =
   | 'project'
   | 'assignee'
   | 'dateRange'
-  | 'category';
+  | 'category'
 
 /**
  * Filter value types
  */
-export type FilterValue = string | number | boolean | Date | null;
+export type FilterValue = string | number | boolean | Date | null
 
 /**
  * Advanced filter operator types
  */
-export type FilterOperator = 
+export type FilterOperator =
   | 'equals'
   | 'contains'
   | 'startsWith'
@@ -174,18 +174,18 @@ export type FilterOperator =
   | 'lessThan'
   | 'between'
   | 'in'
-  | 'notIn';
+  | 'notIn'
 
 /**
  * Advanced filter condition
  */
 export interface FilterCondition {
   /** Field to filter on */
-  field: string;
+  field: string
   /** Filter operator */
-  operator: FilterOperator;
+  operator: FilterOperator
   /** Filter value(s) */
-  value: FilterValue | FilterValue[];
+  value: FilterValue | FilterValue[]
 }
 
 /**
@@ -193,12 +193,12 @@ export interface FilterCondition {
  */
 export interface AdvancedFilterState {
   /** Search term */
-  searchTerm: string;
+  searchTerm: string
   /** Filter conditions */
-  conditions: FilterCondition[];
+  conditions: FilterCondition[]
   /** Sort configuration */
   sort: {
-    field: string;
-    direction: 'asc' | 'desc';
-  };
+    field: string
+    direction: 'asc' | 'desc'
+  }
 }

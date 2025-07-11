@@ -1,9 +1,9 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-import { ProjectPriority, ProjectStatus, TaskPriority, TaskStatus } from "./firestore";
-import { AlertCircle, CheckCircle2, Clock, PauseCircle } from "lucide-react";
-import type { DateLike, BadgeConfig, CurrencyFormatOptions } from "../types";
-import { isFirestoreTimestamp, isValidDate } from "../types";
+import { type ClassValue, clsx } from 'clsx'
+import { AlertCircle, CheckCircle2, Clock, PauseCircle } from 'lucide-react'
+import { twMerge } from 'tailwind-merge'
+import type { BadgeConfig, CurrencyFormatOptions, DateLike } from '../types'
+import { isFirestoreTimestamp, isValidDate } from '../types'
+import { ProjectPriority, ProjectStatus, TaskPriority, TaskStatus } from './firestore'
 
 /**
  * Utility function for merging Tailwind CSS classes
@@ -34,40 +34,39 @@ export function formatDate(
   timestamp: DateLike | null | undefined,
   options: Intl.DateTimeFormatOptions & { fallback?: string } = {}
 ): string {
-  const { fallback = "Not set", ...formatOptions } = options;
+  const { fallback = 'Not set', ...formatOptions } = options
 
-  if (!timestamp) return fallback;
+  if (!timestamp) return fallback
 
   try {
-    let date: Date;
+    let date: Date
 
     // Handle Firestore Timestamp
     if (isFirestoreTimestamp(timestamp)) {
-      date = timestamp.toDate();
+      date = timestamp.toDate()
     }
     // Handle Date objects
     else if (isValidDate(timestamp)) {
-      date = timestamp;
+      date = timestamp
     }
     // Handle string/number dates
-    else if (typeof timestamp === "string" || typeof timestamp === "number") {
-      date = new Date(timestamp);
+    else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+      date = new Date(timestamp)
       if (!isValidDate(date)) {
-        throw new Error("Invalid date string/number");
+        throw new Error('Invalid date string/number')
       }
     }
     // Unknown type
     else {
-      throw new Error("Unsupported timestamp type");
+      throw new Error('Unsupported timestamp type')
     }
 
-    return date.toLocaleDateString(undefined, formatOptions);
+    return date.toLocaleDateString(undefined, formatOptions)
   } catch (error) {
-    console.error("Error formatting date:", error, { timestamp });
-    return "Invalid date";
+    console.error('Error formatting date:', error, { timestamp })
+    return 'Invalid date'
   }
 }
-
 
 /**
  * Gets badge configuration for project status with type safety
@@ -83,29 +82,29 @@ export function formatDate(
 export const getStatusBadge = (status: ProjectStatus): BadgeConfig & { hexColor: string } => {
   const statusConfig: Record<ProjectStatus, BadgeConfig & { hexColor: string }> = {
     [ProjectStatus.Planning]: {
-      color: "bg-blue-500",
-      hexColor: "#3b82f6",
+      color: 'bg-blue-500',
+      hexColor: '#3b82f6',
       Icon: Clock,
     },
     [ProjectStatus.InProgress]: {
-      color: "bg-yellow-500",
-      hexColor: "#eab308",
+      color: 'bg-yellow-500',
+      hexColor: '#eab308',
       Icon: AlertCircle,
     },
     [ProjectStatus.Completed]: {
-      color: "bg-green-500",
-      hexColor: "#22c55e",
+      color: 'bg-green-500',
+      hexColor: '#22c55e',
       Icon: CheckCircle2,
     },
     [ProjectStatus.OnHold]: {
-      color: "bg-gray-500",
-      hexColor: "#6b7280",
+      color: 'bg-gray-500',
+      hexColor: '#6b7280',
       Icon: PauseCircle,
     },
-  };
+  }
 
-  return statusConfig[status] || { color: "bg-gray-500", hexColor: "#6b7280" };
-};
+  return statusConfig[status] || { color: 'bg-gray-500', hexColor: '#6b7280' }
+}
 
 /**
  * Gets badge configuration for project priority with type safety
@@ -121,21 +120,21 @@ export const getStatusBadge = (status: ProjectStatus): BadgeConfig & { hexColor:
 export const getPriorityBadge = (priority: ProjectPriority): BadgeConfig & { hexColor: string } => {
   const priorityConfig: Record<ProjectPriority, BadgeConfig & { hexColor: string }> = {
     [ProjectPriority.Low]: {
-      color: "bg-blue-500",
-      hexColor: "#3b82f6",
+      color: 'bg-blue-500',
+      hexColor: '#3b82f6',
     },
     [ProjectPriority.Medium]: {
-      color: "bg-yellow-500",
-      hexColor: "#eab308",
+      color: 'bg-yellow-500',
+      hexColor: '#eab308',
     },
     [ProjectPriority.High]: {
-      color: "bg-red-500",
-      hexColor: "#ef4444",
+      color: 'bg-red-500',
+      hexColor: '#ef4444',
     },
-  };
+  }
 
-  return priorityConfig[priority] || { color: "bg-gray-500", hexColor: "#6b7280" };
-};
+  return priorityConfig[priority] || { color: 'bg-gray-500', hexColor: '#6b7280' }
+}
 
 /**
  * Gets badge configuration for task status with type safety
@@ -151,33 +150,33 @@ export const getPriorityBadge = (priority: ProjectPriority): BadgeConfig & { hex
 export const getTaskStatusBadge = (status: TaskStatus): BadgeConfig & { hexColor: string } => {
   const statusConfig: Record<TaskStatus, BadgeConfig & { hexColor: string }> = {
     backlog: {
-      color: "bg-slate-500",
-      hexColor: "#64748b",
+      color: 'bg-slate-500',
+      hexColor: '#64748b',
     },
     in_progress: {
-      color: "bg-blue-600",
-      hexColor: "#2563eb",
+      color: 'bg-blue-600',
+      hexColor: '#2563eb',
     },
     completed: {
-      color: "bg-amber-500",
-      hexColor: "#f59e0b",
+      color: 'bg-amber-500',
+      hexColor: '#f59e0b',
     },
     revision: {
-      color: "bg-purple-500",
-      hexColor: "#a855f7",
+      color: 'bg-purple-500',
+      hexColor: '#a855f7',
     },
     done: {
-      color: "bg-emerald-600",
-      hexColor: "#059669",
+      color: 'bg-emerald-600',
+      hexColor: '#059669',
     },
     blocked: {
-      color: "bg-rose-600",
-      hexColor: "#e11d48",
+      color: 'bg-rose-600',
+      hexColor: '#e11d48',
     },
-  };
+  }
 
-  return statusConfig[status] || { color: "bg-gray-500", hexColor: "#6b7280" };
-};
+  return statusConfig[status] || { color: 'bg-gray-500', hexColor: '#6b7280' }
+}
 
 /**
  * Gets badge configuration for task priority with type safety
@@ -190,43 +189,45 @@ export const getTaskStatusBadge = (status: TaskStatus): BadgeConfig & { hexColor
  * const { color, hexColor } = getTaskPriorityBadge("high");
  * ```
  */
-export const getTaskPriorityBadge = (priority: TaskPriority | undefined | null): BadgeConfig & { hexColor: string } => {
+export const getTaskPriorityBadge = (
+  priority: TaskPriority | undefined | null
+): BadgeConfig & { hexColor: string } => {
   // Handle undefined/null priority values
   if (!priority) {
-    return { color: "bg-gray-500", hexColor: "#6b7280" };
+    return { color: 'bg-gray-500', hexColor: '#6b7280' }
   }
 
   // Normalize the priority value to lowercase to handle case sensitivity
-  const normalizedPriority = priority.toString().toLowerCase() as TaskPriority;
+  const normalizedPriority = priority.toString().toLowerCase() as TaskPriority
 
   const priorityConfig: Record<TaskPriority, BadgeConfig & { hexColor: string }> = {
     low: {
-      color: "bg-green-500",
-      hexColor: "#22c55e",
+      color: 'bg-green-500',
+      hexColor: '#22c55e',
     },
     medium: {
-      color: "bg-orange-500",
-      hexColor: "#f97316",
+      color: 'bg-orange-500',
+      hexColor: '#f97316',
     },
     high: {
-      color: "bg-red-600",
-      hexColor: "#dc2626",
+      color: 'bg-red-600',
+      hexColor: '#dc2626',
     },
-  };
+  }
 
-  const result = priorityConfig[normalizedPriority] || { color: "bg-gray-500", hexColor: "#6b7280" };
+  const result = priorityConfig[normalizedPriority] || { color: 'bg-gray-500', hexColor: '#6b7280' }
 
   // Debug logging only when returning gray (fallback)
-  if (result.hexColor === "#6b7280") {
+  if (result.hexColor === '#6b7280') {
     console.log('getTaskPriorityBadge - Using fallback gray for:', {
       originalPriority: priority,
       normalizedPriority: normalizedPriority,
-      availableKeys: Object.keys(priorityConfig)
-    });
+      availableKeys: Object.keys(priorityConfig),
+    })
   }
 
-  return result;
-};
+  return result
+}
 
 /**
  * Formats a number as Indonesian Rupiah currency (IDR) with type safety
@@ -247,17 +248,17 @@ export function formatRupiah(
   options: Pick<CurrencyFormatOptions, 'withSymbol'> = { withSymbol: true }
 ): string {
   if (value === null || value === undefined) {
-    return '';
+    return ''
   }
 
-  const numValue = typeof value === 'string' ? Number(parseCurrencyInput(value)) : value;
+  const numValue = typeof value === 'string' ? Number(parseCurrencyInput(value)) : value
 
   if (!Number.isFinite(numValue)) {
-    return '';
+    return ''
   }
 
-  const formatted = new Intl.NumberFormat('id-ID').format(numValue);
-  return options.withSymbol ? `Rp ${formatted}` : formatted;
+  const formatted = new Intl.NumberFormat('id-ID').format(numValue)
+  return options.withSymbol ? `Rp ${formatted}` : formatted
 }
 
 /**
@@ -278,24 +279,24 @@ export function formatCurrency(
   options: CurrencyFormatOptions = { withSymbol: true, currency: 'USD', locale: 'en-US' }
 ): string {
   if (value === null || value === undefined) {
-    return '';
+    return ''
   }
 
-  const numValue = typeof value === 'string' ? Number(parseCurrencyInput(value)) : value;
+  const numValue = typeof value === 'string' ? Number(parseCurrencyInput(value)) : value
 
   if (!Number.isFinite(numValue)) {
-    return '';
+    return ''
   }
 
-  const { withSymbol = true, currency = 'USD', locale = 'en-US' } = options;
-  const formatted = new Intl.NumberFormat(locale).format(numValue);
+  const { withSymbol = true, currency = 'USD', locale = 'en-US' } = options
+  const formatted = new Intl.NumberFormat(locale).format(numValue)
 
   if (!withSymbol) {
-    return formatted;
+    return formatted
   }
 
-  const symbol = currency === 'USD' ? '$' : currency === 'IDR' ? 'Rp ' : '';
-  return `${symbol}${formatted}`;
+  const symbol = currency === 'USD' ? '$' : currency === 'IDR' ? 'Rp ' : ''
+  return `${symbol}${formatted}`
 }
 
 /**
@@ -306,13 +307,13 @@ export function formatCurrency(
  */
 export function formatCurrencyInput(rawValue: string): string {
   if (!rawValue || typeof rawValue !== 'string') {
-    return "";
+    return ''
   }
-  const justDigits = rawValue.replace(/\D/g, "");
+  const justDigits = rawValue.replace(/\D/g, '')
   if (!justDigits) {
-    return "";
+    return ''
   }
-  return new Intl.NumberFormat('id-ID').format(Number(justDigits));
+  return new Intl.NumberFormat('id-ID').format(Number(justDigits))
 }
 
 /**
@@ -323,7 +324,7 @@ export function formatCurrencyInput(rawValue: string): string {
  */
 export function parseCurrencyInput(formattedValue: string): string {
   if (!formattedValue || typeof formattedValue !== 'string') {
-    return "";
+    return ''
   }
-  return formattedValue.replace(/\D/g, "");
+  return formattedValue.replace(/\D/g, '')
 }

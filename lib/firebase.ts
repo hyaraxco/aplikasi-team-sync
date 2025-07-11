@@ -1,6 +1,6 @@
-import { initializeApp, getApps, getApp } from "firebase/app"
-import { getAuth } from "firebase/auth"
-import { getFirestore } from "firebase/firestore"
+import { getApp, getApps, initializeApp } from 'firebase/app'
+import { getAuth } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,14 +17,15 @@ const auth = getAuth(app)
 const db = getFirestore(app)
 
 // Secondary app for admin operations (creating users without affecting current session)
-let secondaryApp: any = null;
-let secondaryAuth: any = null;
+let secondaryApp: any = null
+let secondaryAuth: any = null
 
 try {
-  secondaryApp = getApps().find(app => app.name === 'secondary') || initializeApp(firebaseConfig, 'secondary');
-  secondaryAuth = getAuth(secondaryApp);
+  secondaryApp =
+    getApps().find(app => app.name === 'secondary') || initializeApp(firebaseConfig, 'secondary')
+  secondaryAuth = getAuth(secondaryApp)
 } catch (error) {
-  console.warn('Secondary Firebase app initialization failed:', error);
+  console.warn('Secondary Firebase app initialization failed:', error)
 }
 
 export { app, auth, db, secondaryAuth }

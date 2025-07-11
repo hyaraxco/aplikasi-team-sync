@@ -1,7 +1,6 @@
-"use client";
+'use client'
 
-import React from "react";
-import { Button } from "@/components/atomics/button";
+import { Button } from '@/components/atomics/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -9,20 +8,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/molecules/dropdown-menu";
+} from '@/components/molecules/dropdown-menu'
 
 export interface FilterOption<T extends string = string> {
-  id: T;
-  label: string;
+  id: T
+  label: string
 }
 
 interface FilterDropdownProps<T extends string = string> {
-  filterType: string;
-  filterLabel: string;
-  options: FilterOption<T>[];
-  selectedValues: T[];
-  onChange: (value: T) => void;
-  triggerClassName?: string;
+  filterType: string
+  filterLabel: string
+  options: FilterOption<T>[]
+  selectedValues: T[]
+  onChange: (value: T) => void
+  triggerClassName?: string
 }
 
 /**
@@ -39,15 +38,15 @@ export function FilterDropdown<T extends string = string>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={triggerClassName}>
+        <Button variant='outline' size='sm' className={triggerClassName}>
           Filter: {filterType}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align='end' className='w-48'>
         <DropdownMenuLabel>{filterLabel}</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {options.map((option) => (
+        {options.map(option => (
           <DropdownMenuCheckboxItem
             key={option.id}
             checked={selectedValues.includes(option.id)}
@@ -58,5 +57,5 @@ export function FilterDropdown<T extends string = string>({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }
