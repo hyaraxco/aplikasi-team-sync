@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/atomics/badge'
 import {
   Select,
   SelectContent,

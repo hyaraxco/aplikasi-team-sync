@@ -5,13 +5,13 @@ import type React from 'react'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
-import { Spinner } from '@/components/ui/spinner'
+import { Spinner } from '@/components/atomics/spinner'
 import { auth } from '@/lib/firebase'
 import { ActivityActionType, addActivity } from '@/lib/firestore'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Alert, AlertDescription } from './molecules/Alert.molecule'
+import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')

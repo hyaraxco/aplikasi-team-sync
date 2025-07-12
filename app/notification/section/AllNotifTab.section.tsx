@@ -1,5 +1,5 @@
-import { EmptyState } from '@/components/common/data-display/EmptyState'
-import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { Skeleton } from '@/components/atomics/skeleton'
 import { Bell } from 'lucide-react'
 import NotificationItem from './NotificationItem.section'
 

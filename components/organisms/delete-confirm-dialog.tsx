@@ -12,7 +12,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Spinner } from './ui/spinner'
+import { Spinner } from '@/components/atomics/spinner'
 
 interface DeleteConfirmDialogProps {
   isOpen: boolean

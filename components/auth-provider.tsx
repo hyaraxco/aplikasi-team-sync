@@ -1,8 +1,7 @@
 'use client'
 
 import type React from 'react'
-
-import { Spinner } from '@/components/ui/spinner'
+import { Spinner } from '@/components/atomics/spinner'
 import { auth } from '@/lib/firebase'
 import {
   ActivityActionType,

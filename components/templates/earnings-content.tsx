@@ -9,8 +9,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+} from '@/components/atomics/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
 import { useEarnings } from '@/hooks/use-earnings'
 import { formatRupiah } from '@/lib/utils'
 import { format } from 'date-fns'

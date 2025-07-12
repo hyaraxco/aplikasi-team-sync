@@ -17,8 +17,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
+} from '@/components/atomics/select'
+import { Textarea } from '@/components/atomics/textarea'
 import { useRouter } from 'next/navigation'
 import type React from 'react'
 import { useRef, useState } from 'react'

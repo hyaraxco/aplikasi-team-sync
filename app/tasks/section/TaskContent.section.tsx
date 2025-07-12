@@ -5,8 +5,8 @@ import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
 import { useAuth } from '@/components/auth-provider'
-import { EmptyState } from '@/components/common/data-display/EmptyState'
-import { PageHeader } from '@/components/common/layout/PageHeader'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { PageHeader } from '@/components/organisms/PageHeader'
 import { DatePicker } from '@/components/molecules/AntDatePicker'
 import {
   Command,
@@ -30,9 +30,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
+} from '@/components/atomics/select'
+import { Skeleton } from '@/components/atomics/skeleton'
+import { Textarea } from '@/components/atomics/textarea'
 import { useToast } from '@/hooks'
 import { db } from '@/lib/firebase'
 import {

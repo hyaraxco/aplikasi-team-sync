@@ -25,7 +25,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 // Import child components and their necessary types
-import { PageHeader } from '@/components/common/layout/PageHeader'
+import { PageHeader } from '@/components/organisms/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
 import { EditLeaderDialog } from './EditLeader.section'
 import { MembersTable, type EnrichedTeamMember } from './MemberTable.section'

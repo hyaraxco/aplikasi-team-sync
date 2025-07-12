@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/components/auth-provider'
-import { PageHeader } from '@/components/common/layout/PageHeader'
+import { PageHeader } from '@/components/organisms/PageHeader'
 import { activateUser, getUsers, type UserData } from '@/lib/firestore'
 import { UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'

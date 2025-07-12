@@ -16,11 +16,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+} from '@/components/atomics/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
 import { useEffect, useState } from 'react'
 
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/atomics/skeleton'
 
 import { MonthPicker } from '@/components/molecules/AntDatePicker'
 import { db } from '@/lib/firebase'
@@ -37,8 +37,8 @@ import { formatRupiah } from '@/lib/utils'
 import { format } from 'date-fns'
 import { collection, getDocs } from 'firebase/firestore'
 import { Download, FileText } from 'lucide-react'
-import { Alert, AlertDescription } from './molecules/Alert.molecule'
-import { Badge } from './ui/badge'
+import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
+import { Badge } from '@/components/atomics/badge'
 
 export function PayrollContent() {
   const { user, userRole } = useAuth()

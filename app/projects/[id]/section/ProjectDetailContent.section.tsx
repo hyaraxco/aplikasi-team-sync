@@ -3,7 +3,7 @@
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
 import { DeleteConfirmDialog } from '@/components/delete-confirm-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
 import {
   deleteProject,
   getProjectActivities,

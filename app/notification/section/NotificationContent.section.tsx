@@ -1,8 +1,8 @@
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
-import { PageHeader } from '@/components/common/layout/PageHeader'
+import { PageHeader } from '@/components/organisms/PageHeader'
 import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
 import { db } from '@/lib/firebase'
 import { type Activity, markAllActivitiesAsRead } from '@/lib/firestore'
 import {

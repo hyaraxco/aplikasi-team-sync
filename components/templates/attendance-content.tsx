@@ -11,9 +11,9 @@ import {
 } from '@/components/molecules/card'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
 
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/atomics/skeleton'
 
 import {
   getAttendanceRecords,
@@ -24,7 +24,7 @@ import {
 } from '@/lib/firestore'
 import { format, getHours } from 'date-fns'
 import { Clock, Info, LogIn, LogOut } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from './molecules/Alert.molecule'
+import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
 
 export function AttendanceContent() {
   const { user, userRole } = useAuth()

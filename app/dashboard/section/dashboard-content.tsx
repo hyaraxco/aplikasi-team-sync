@@ -4,7 +4,7 @@ import { ActivityFeed } from '@/app/dashboard/section/activity-feed'
 import { useAuth } from '@/components/auth-provider'
 import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/atomics/skeleton'
 import {
   formatRupiah,
   getAttendanceRecords,
