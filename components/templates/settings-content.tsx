@@ -20,13 +20,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
+} from '@/components/atomics/select'
+import { Separator } from '@/components/atomics/separator'
+import { Switch } from '@/components/atomics/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
+import { Textarea } from '@/components/atomics/textarea'
 import { useState } from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from './atomics/Avatar.atomic'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
 
 export function SettingsContent() {
   const { userRole, user } = useAuth()

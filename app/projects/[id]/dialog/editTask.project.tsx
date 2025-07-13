@@ -28,7 +28,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/components/atomics/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks'
 import {

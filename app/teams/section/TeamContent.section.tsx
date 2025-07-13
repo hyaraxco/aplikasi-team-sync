@@ -16,12 +16,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/atomics/skeleton'
 
 // Import komponen baru
 import TeamCard from '@/app/teams/section/TeamCard.section'
-import { EmptyState } from '@/components/common/data-display/EmptyState'
-import { PageHeader } from '@/components/common/layout/PageHeader'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { PageHeader } from '@/components/organisms/PageHeader'
 import TeamFilterBar from './TeamFilterBar.section'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'

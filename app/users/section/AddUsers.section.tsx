@@ -18,7 +18,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/components/atomics/select'
 import { auth, secondaryAuth } from '@/lib/firebase'
 import {
   ActivityActionType,

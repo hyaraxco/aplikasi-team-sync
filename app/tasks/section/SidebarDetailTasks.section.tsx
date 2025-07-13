@@ -1,17 +1,17 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/avatar'
+import { Badge } from '@/components/atomics/badge'
+import { Separator } from '@/components/atomics/separator'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet'
-import { Textarea } from '@/components/ui/textarea'
+} from '@/components/atomics/sheet'
+import { Textarea } from '@/components/atomics/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { db } from '@/lib/firebase'
 import { format } from 'date-fns'

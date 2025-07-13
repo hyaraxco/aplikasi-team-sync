@@ -3,9 +3,9 @@
 import type React from 'react'
 
 import { useAuth } from '@/components/auth-provider'
-import { Navbar } from '@/components/navbar'
-import { Sidebar } from '@/components/sidebar'
-import { Spinner } from '@/components/ui/spinner'
+import { Navbar } from '@/components/organisms/navbar'
+import { Sidebar } from '@/components/organisms/sidebar'
+import { Spinner } from '@/components/atomics/spinner'
 import { getAuth } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'

@@ -1,7 +1,7 @@
 'use client'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
-import { EmptyState } from '@/components/common/data-display/EmptyState'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { getActivityDisplayMessage } from '@/lib/activity-formatter'

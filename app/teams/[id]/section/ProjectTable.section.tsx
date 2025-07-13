@@ -3,7 +3,7 @@
 import ProjectCard from '@/app/projects/section/ProjectCard.section'
 import { Button } from '@/components/atomics/Button.atomic'
 import { useAuth } from '@/components/auth-provider'
-import { EmptyState } from '@/components/common/data-display/EmptyState'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Card } from '@/components/molecules/card'
 import type { Project } from '@/lib/firestore'
 import { getTeamProjects, removeTeamFromProject } from '@/lib/firestore'

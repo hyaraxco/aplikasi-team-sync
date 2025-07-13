@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/atomics/button'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
-import { EmptyState } from '@/components/common/data-display/EmptyState'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Card } from '@/components/molecules/card'
 import { Badge } from '@/components/ui/badge'
 import type { Timestamp as FirestoreTimestamp, TeamMember, UserData } from '@/lib/firestore' // Added Timestamp type

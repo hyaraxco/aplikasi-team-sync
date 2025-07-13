@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/molecules/dropdown-menu'
-import { NotificationPanel } from '@/components/notification/NotificationPanel'
+import { NotificationPanel } from '@/components/organisms/NotificationPanel'
 import { useSidebar } from '@/hooks/use-sidebar'
 import { auth } from '@/lib/firebase'
 import { signOut } from 'firebase/auth'
@@ -19,7 +19,7 @@ import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from './atomics/Avatar.atomic'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
 
 export function Navbar() {
   const { user, userRole, userData } = useAuth()

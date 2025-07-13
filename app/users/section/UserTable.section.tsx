@@ -5,8 +5,8 @@ import { Button } from '@/components/atomics/button'
 import { Card, CardContent } from '@/components/molecules/card'
 import { CheckCircle2, Edit, Mail, Phone, Trash2Icon, User, XCircle } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/atomics/badge'
+import { Skeleton } from '@/components/atomics/skeleton'
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@/components/atomics/table'
 import { type UserData } from '@/lib/firestore'
 import { formatDate, formatRupiah } from '@/lib/utils'
 

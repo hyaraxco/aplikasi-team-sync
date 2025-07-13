@@ -3,8 +3,8 @@
 import { Button } from '@/components/atomics/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
 import { useAuth } from '@/components/auth-provider' // Import useAuth
-import { EmptyState } from '@/components/common/data-display/EmptyState'
-import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { Skeleton } from '@/components/atomics/skeleton'
 import { db } from '@/lib/firebase' // Only db, auth will be from useAuth
 import { type Activity, markAllActivitiesAsRead } from '@/lib/firestore'
 import { getActivityDisplayMessage, getNotificationTypeStyle } from '@/lib/helpers'

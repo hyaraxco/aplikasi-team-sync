@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Skeleton } from '@/components/ui/skeleton' // Import Skeleton
-import { Textarea } from '@/components/ui/textarea'
+import { Skeleton } from '@/components/atomics/skeleton' // Import Skeleton
+import { Textarea } from '@/components/atomics/textarea'
 import { useRouter } from 'next/navigation'
 import type React from 'react'
 import { useEffect, useState } from 'react'
@@ -34,8 +34,8 @@ import {
 import { Timestamp } from 'firebase/firestore'
 import ProjectFilterBar from './ProjectFilterBar.section'
 
-import { EmptyState } from '@/components/common/data-display/EmptyState'
-import { PageHeader } from '@/components/common/layout/PageHeader'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { PageHeader } from '@/components/organisms/PageHeader'
 import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
 import { DatePicker } from '@/components/molecules/AntDatePicker'
 import {
@@ -45,8 +45,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/molecules/Select.molecule'
-import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/atomics/badge'
+import { ScrollArea } from '@/components/atomics/scroll-area'
 import { formatCurrencyInput, parseCurrencyInput } from '@/lib/utils'
 import { CircleX, FolderKanban, FolderPlus, Loader2 } from 'lucide-react'
 

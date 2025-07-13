@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/atomics/skeleton'
 import {
   getRecentActivities,
   getUserActivities,

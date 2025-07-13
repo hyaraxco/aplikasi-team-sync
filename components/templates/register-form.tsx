@@ -5,12 +5,12 @@ import type React from 'react'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
-import { Spinner } from '@/components/ui/spinner'
+import { Spinner } from '@/components/atomics/spinner'
 import { auth } from '@/lib/firebase'
 import { createUserData } from '@/lib/firestore'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { useState } from 'react'
-import { Alert, AlertDescription, AlertTitle } from './molecules/Alert.molecule'
+import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
 
 export function RegisterForm() {
   const [name, setName] = useState('')

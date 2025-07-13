@@ -1,6 +1,6 @@
 'use client'
 
-import FilterBar, { FilterOption, SortOption } from '@/components/common/data-display/FilterBar'
+import FilterBar, { FilterOption, SortOption } from '@/components/molecules/data-display/FilterBar'
 
 interface TeamFilterBarProps {
   searchTerm: string

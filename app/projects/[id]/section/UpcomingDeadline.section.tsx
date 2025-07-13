@@ -1,6 +1,6 @@
 'use client'
 
-import { EmptyState } from '@/components/common/data-display/EmptyState'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import { Badge } from '@/components/ui/badge'
 import { addDays, differenceInCalendarDays, format, isBefore } from 'date-fns'
