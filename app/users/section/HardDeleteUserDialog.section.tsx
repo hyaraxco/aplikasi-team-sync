@@ -10,12 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import {
-  ActivityActionType, // Fungsi baru dari firestore.ts
-  addActivity,
-  deleteUserRecord,
-  type UserData,
-} from '@/lib/firestore'
+import { addActivity, deleteUserRecord } from '@/lib/database'
+import type { UserData } from '@/types'
+import { ActivityActionType } from '@/types/database'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'

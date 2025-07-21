@@ -1,7 +1,6 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
 import {
   Command,
   CommandEmpty,
@@ -27,7 +26,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/molecules/form'
-import { cn } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/molecules/popover'
+import { cn } from '@/lib/ui'
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'

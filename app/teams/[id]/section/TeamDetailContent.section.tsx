@@ -3,8 +3,7 @@
 import { EditTeamDialog } from '@/app/teams/[id]/section/EditTeam.section'
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
-import { DeleteConfirmDialog } from '@/components/delete-confirm-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import {
   deleteTeam,
   getTeamActivities,
@@ -14,19 +13,17 @@ import {
   getTeamProjects,
   getUserData,
   setTeamLeader,
-  type Activity as ActivityType,
-  type Project,
-  type Team,
-  type TeamMetrics,
-  type UserData,
-} from '@/lib/firestore'
+} from '@/lib/database'
+import type { Activity as ActivityType, Project, Team, TeamMetrics, UserData } from '@/types'
 import { AlertCircle, ChevronLeft, Edit2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 // Import child components and their necessary types
+import { Alert, AlertDescription, AlertTitle } from '@/components/atomics/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules'
+import { DeleteConfirmDialog } from '@/components/organisms'
 import { PageHeader } from '@/components/organisms/PageHeader'
-import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
 import { EditLeaderDialog } from './EditLeader.section'
 import { MembersTable, type EnrichedTeamMember } from './MemberTable.section'
 import { ProjectsTable } from './ProjectTable.section'
@@ -197,17 +194,13 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
 
   // Placeholder handlers for MembersTable actions
   const handleAddMember = () => {
-    console.log('Add member action triggered for team:', teamId)
     alert('Add member functionality is not yet implemented.')
-    // TODO: Implement dialog or navigation for adding a member
   }
 
   const handleEditMember = (member: EnrichedTeamMember) => {
-    console.log('Edit member action triggered for:', member)
     alert(
       `Edit member functionality for ${member.userData?.displayName || member.userId} is not yet implemented.`
     )
-    // TODO: Implement dialog or navigation for editing a member
   }
 
   const handleOpenEditLeadDialog = () => setEditLeadDialogOpen(true)

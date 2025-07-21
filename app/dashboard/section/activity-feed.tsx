@@ -1,6 +1,8 @@
 'use client'
 
+import { Skeleton } from '@/components/atomics/skeleton'
 import { useAuth } from '@/components/auth-provider'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules/avatar'
 import {
   Card,
   CardContent,
@@ -8,16 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/card'
-import { Skeleton } from '@/components/atomics/skeleton'
-import {
-  getRecentActivities,
-  getUserActivities,
-  getUserData,
-  type Activity,
-  type UserData,
-} from '@/lib/firestore'
+import { getRecentActivities, getUserActivities, getUserData } from '@/lib/database'
+import type { Activity, UserData } from '@/types'
 import { useEffect, useState } from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from '../../../components/atomics/Avatar.atomic'
 
 export function ActivityFeed() {
   const { user, userRole } = useAuth()

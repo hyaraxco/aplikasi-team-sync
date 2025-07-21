@@ -1,5 +1,7 @@
-import { AttendanceContent } from '@/components/attendance-content'
-import { DashboardLayout } from '@/components/dashboard-layout'
+'use client'
+
+import { AttendanceContent } from '@/components/templates/attendance-content'
+import { DashboardLayout } from '@/components/templates/dashboard-layout'
 
 export default function AttendancePage() {
   return (

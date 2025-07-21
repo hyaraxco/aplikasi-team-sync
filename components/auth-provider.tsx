@@ -1,17 +1,13 @@
 'use client'
 
-import type React from 'react'
 import { Spinner } from '@/components/atomics/spinner'
+import { addActivity, getUserData } from '@/lib/database'
 import { auth } from '@/lib/firebase'
-import {
-  ActivityActionType,
-  addActivity,
-  getUserData,
-  type UserData,
-  type UserRole,
-} from '@/lib/firestore'
+import type { UserData, UserRole } from '@/types'
+import { ActivityActionType } from '@/types/database'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { usePathname, useRouter } from 'next/navigation'
+import type React from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 

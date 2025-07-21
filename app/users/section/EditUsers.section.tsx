@@ -18,14 +18,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import {
-  ActivityActionType,
-  addActivity,
-  updateUserData,
-  type UserData,
-  type UserRole,
-} from '@/lib/firestore'
+} from '@/components/molecules/select'
+import { ActivityActionType, addActivity, updateUserData } from '@/lib/database'
+import { UserData, UserRole } from '@/types'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -45,7 +40,6 @@ export default function EditUserDialog({
 }: EditUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { user: adminUser } = useAuth()
-
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<UserRole>('employee')

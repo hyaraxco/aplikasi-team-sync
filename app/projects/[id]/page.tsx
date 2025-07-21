@@ -1,4 +1,4 @@
-import { DashboardLayout } from '@/components/dashboard-layout'
+import { DashboardLayout } from '@/components/templates'
 import { ProjectDetailContent } from './section/ProjectDetailContent.section'
 
 interface ProjectDetailPageProps {

@@ -1,7 +1,6 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
 import { useAuth } from '@/components/auth-provider'
 import {
   Command,
@@ -28,6 +27,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/molecules/form'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/molecules/popover'
 import {
   ActivityActionType,
   Project,
@@ -35,8 +35,8 @@ import {
   addExistingProjectToTeam,
   getProjects,
   getTeamProjects,
-} from '@/lib/firestore'
-import { cn } from '@/lib/utils'
+} from '@/lib/database'
+import { cn } from '@/lib/ui'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { serverTimestamp } from 'firebase/firestore'
 import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'

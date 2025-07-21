@@ -1,13 +1,14 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
+import { Skeleton } from '@/components/atomics/skeleton'
 import { useAuth } from '@/components/auth-provider' // Import useAuth
 import { EmptyState } from '@/components/molecules/data-display/EmptyState'
-import { Skeleton } from '@/components/atomics/skeleton'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/molecules/popover'
+import { getUserData, markAllActivitiesAsRead, resolveActorNameFromUserData } from '@/lib/database'
 import { db } from '@/lib/firebase' // Only db, auth will be from useAuth
-import { type Activity, markAllActivitiesAsRead } from '@/lib/firestore'
 import { getActivityDisplayMessage, getNotificationTypeStyle } from '@/lib/helpers'
+import type { Activity, UserData } from '@/types'
 import {
   collection,
   doc,
@@ -52,6 +53,7 @@ export function NotificationPanel() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [usersData, setUsersData] = useState<Map<string, UserData>>(new Map())
   const { user, userRole } = useAuth() // Gunakan useAuth
 
   useEffect(() => {
@@ -89,6 +91,24 @@ export function NotificationPanel() {
           ...(doc.data() as any),
         })) as Activity[]
 
+        // Fetch user data for all unique user IDs in activities
+        const uniqueUserIds = [...new Set(activities.map(activity => activity.userId))]
+        const userDataMap = new Map<string, UserData>()
+
+        await Promise.all(
+          uniqueUserIds.map(async userId => {
+            try {
+              const userData = await getUserData(userId)
+              if (userData) {
+                userDataMap.set(userId, userData)
+              }
+            } catch (error) {
+              console.error(`Error fetching user data for ${userId}:`, error)
+            }
+          })
+        )
+
+        setUsersData(userDataMap)
         setNotifications(activities.slice(0, 5)) // Tampilkan 5 notifikasi unread teratas
         setUnreadCount(activities.length) // Jumlah total unread sesuai query
         setLoading(false)
@@ -201,10 +221,30 @@ export function NotificationPanel() {
                   title = actionText.includes(title) ? actionText : `${title}: ${actionText}`
                 }
 
-                const actorName =
-                  notif.userId && user && notif.userId === user.uid
-                    ? 'You'
-                    : notif.details?.actorName || 'Someone'
+                // Resolve actor name with proper fallback hierarchy
+                const actorName = (() => {
+                  // If it's the current user, show "You"
+                  if (notif.userId && user && notif.userId === user.uid) {
+                    return 'You'
+                  }
+
+                  // Try to get user data from our fetched data
+                  const userData = usersData.get(notif.userId)
+
+                  if (userData) {
+                    return resolveActorNameFromUserData(userData, {
+                      includeRole: true,
+                      showUserIdInFallback: true,
+                    })
+                  }
+
+                  // Fallback to details if available, otherwise unknown user with ID
+                  return (
+                    notif.details?.actorName ||
+                    `Unknown User (ID: ${notif.userId?.substring(0, 8) || 'unknown'})`
+                  )
+                })()
+
                 const message = getActivityDisplayMessage(notif, actorName)
                 const time = formatRelativeTime(notif.timestamp)
                 const isUnread = notif.status === 'unread'

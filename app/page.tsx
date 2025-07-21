@@ -1,4 +1,6 @@
-import { LoginForm } from '@/components/login-form'
+'use client'
+
+import { LoginForm } from '@/components/templates/login-form'
 
 export default function Home() {
   return (

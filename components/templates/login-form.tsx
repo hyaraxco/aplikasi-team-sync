@@ -2,16 +2,17 @@
 
 import type React from 'react'
 
+import { Alert, AlertDescription } from '@/components/atomics/alert'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
 import { Spinner } from '@/components/atomics/spinner'
+import { addActivity } from '@/lib/database'
 import { auth } from '@/lib/firebase'
-import { ActivityActionType, addActivity } from '@/lib/firestore'
+import { ActivityActionType } from '@/types/database'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')

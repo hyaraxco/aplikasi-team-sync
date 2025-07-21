@@ -1,6 +1,7 @@
 'use client'
 
-import { useAuth } from '@/components/auth-provider'
+import { Badge } from '@/components/atomics/badge'
+import { Button } from '@/components/atomics/button'
 import {
   Table,
   TableBody,
@@ -8,20 +9,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { useMemo, useState } from 'react'
-
-import { Button } from '@/components/atomics/button'
-
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
-import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+} from '@/components/atomics/table'
+import { useAuth } from '@/components/auth-provider'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules/avatar'
 import { Card } from '@/components/molecules/card'
-import { Badge } from '@/components/ui/badge'
-import type { Timestamp as FirestoreTimestamp, TeamMember, UserData } from '@/lib/firestore' // Added Timestamp type
-import { ActivityActionType, addActivity, removeTeamMember } from '@/lib/firestore'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import type { Timestamp as FirestoreTimestamp, TeamMember, UserData } from '@/lib/database' // Added Timestamp type
+import { ActivityActionType, addActivity, removeTeamMember } from '@/lib/database'
 import { format } from 'date-fns'
 import { serverTimestamp } from 'firebase/firestore'
 import { Edit, Mail, Phone, Trash2Icon, User, Users } from 'lucide-react' // Removed UserPlus, Filter, ArrowUpDown as they are in MemberFilterBar
+import { useMemo, useState } from 'react'
 import { AddMemberDialog } from './AddMember.section'
 import { DeleteMemberDialog } from './DeleteMember.section'
 import { EditMemberDialog } from './EditMember.section'

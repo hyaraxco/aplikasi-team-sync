@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/molecules/Select.molecule'
+} from '@/components/molecules/select'
 import { Search } from 'lucide-react'
 import { ChangeEvent } from 'react'
 
