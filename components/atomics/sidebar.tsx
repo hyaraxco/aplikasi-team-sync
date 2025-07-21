@@ -7,12 +7,17 @@ import * as React from 'react'
 
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
-import { Separator } from '@/components/atomics/separator'
-import { Sheet, SheetContent } from '@/components/atomics/sheet'
 import { Skeleton } from '@/components/atomics/skeleton'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/atomics/tooltip'
-import { useIsMobile } from '@/hooks/use-mobile'
-import { cn } from '@/lib/utils'
+import { Separator } from '@/components/molecules/separator'
+import { Sheet, SheetContent } from '@/components/molecules/sheet'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/molecules/tooltip'
+import { useIsMobile } from '@/hooks'
+import { cn } from '@/lib/ui'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar:state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7

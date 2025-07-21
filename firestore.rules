@@ -33,10 +33,28 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Tasks: All authenticated users can read, only admins can write
+    // Tasks: All authenticated users can read
+    // Admins can write anything
+    // Employees can only update status and updatedAt fields for tasks assigned to them
     match /tasks/{taskId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
+      allow update: if isAuthenticated() &&
+        // Employee is assigned to this task
+        request.auth.uid in resource.data.assignedTo &&
+        // Only allow updating specific fields
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'completedAt']) &&
+        // Only allow specific status transitions
+        (
+          // From backlog to in_progress
+          (resource.data.status == 'backlog' && request.resource.data.status == 'in_progress') ||
+          // From in_progress to completed (for review)
+          (resource.data.status == 'in_progress' && request.resource.data.status == 'completed') ||
+          // From revision back to in_progress (resume after revision)
+          (resource.data.status == 'revision' && request.resource.data.status == 'in_progress') ||
+          // From rejected back to in_progress (resume after rejection)
+          (resource.data.status == 'rejected' && request.resource.data.status == 'in_progress')
+        );
     }
 
     // Teams: All authenticated users can read, only admins can write

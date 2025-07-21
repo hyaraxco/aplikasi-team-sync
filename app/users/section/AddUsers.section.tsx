@@ -5,6 +5,13 @@ import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
 import { useAuth } from '@/components/auth-provider'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/molecules'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -12,13 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/atomics/select'
+
 import { auth, secondaryAuth } from '@/lib/firebase'
 import {
   ActivityActionType,

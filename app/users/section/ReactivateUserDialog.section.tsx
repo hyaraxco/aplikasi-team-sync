@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { type UserData, activateUser } from '@/lib/firestore' // activateUser sudah ada
+import { type UserData, activateUser } from '@/lib/database' // activateUser sudah ada
 import { toast } from 'sonner'
 
 interface ReactivateUserDialogProps {

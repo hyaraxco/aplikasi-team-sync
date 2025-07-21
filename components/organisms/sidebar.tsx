@@ -2,8 +2,8 @@
 
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
-import { ScrollArea } from '@/components/atomics/scroll-area'
-import { cn } from '@/lib/utils'
+import { ScrollArea } from '@/components/molecules/scroll-area'
+import { cn } from '@/lib/ui'
 import {
   Briefcase,
   Calendar,
@@ -22,14 +22,14 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import React, { useEffect } from 'react'
 // import { SidebarToggle } from "@/components/sidebar-toggle"
+import { Logo } from '@/components/atomics/logo'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/atomics/tooltip'
-import { useSidebar } from '@/hooks/use-sidebar'
-import { Logo } from '@/components/atomics/logo'
+} from '@/components/molecules/tooltip'
+import { useSidebar } from '@/hooks'
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   isCollapsed: boolean

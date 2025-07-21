@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/molecules/dropdown-menu'
 import { NotificationPanel } from '@/components/organisms/NotificationPanel'
-import { useSidebar } from '@/hooks/use-sidebar'
+import { useSidebar } from '@/hooks'
 import { auth } from '@/lib/firebase'
 import { signOut } from 'firebase/auth'
 import { ChevronDown, Menu, Moon, Search, Sun } from 'lucide-react'
@@ -19,7 +19,7 @@ import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
+import { Avatar, AvatarFallback, AvatarImage } from '../molecules'
 
 export function Navbar() {
   const { user, userRole, userData } = useAuth()

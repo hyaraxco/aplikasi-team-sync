@@ -1,13 +1,18 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
-import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { Avatar, AvatarFallback, AvatarImage, ScrollArea } from '@/components/molecules'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { getActivityDisplayMessage } from '@/lib/activity-formatter'
-import { type Activity as BaseActivity, type UserData, ActivityActionType } from '@/lib/firestore'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import {
+  getActivityDisplayMessage,
+  getUserData,
+  resolveActorNameFromUserData,
+} from '@/lib/database'
+import type { Activity as BaseActivity, UserData } from '@/types'
+import { ActivityActionType } from '@/types/database'
 import { formatDistanceToNow } from 'date-fns'
 import { Activity } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 // Extend Activity type to explicitly allow string actions for legacy support
 interface Activity extends Omit<BaseActivity, 'action'> {
@@ -21,6 +26,36 @@ interface RecentActivityCardProps {
 }
 
 export function RecentActivityCard({ activities, usersDataMap }: RecentActivityCardProps) {
+  const [internalUsersData, setInternalUsersData] = useState<Map<string, UserData>>(new Map())
+
+  // Fetch user data for activities if not provided via props
+  useEffect(() => {
+    const fetchUserData = async () => {
+      // Fetch user data internally
+      const uniqueUserIds = [...new Set(activities.map(activity => activity.userId))]
+      const userDataMap = new Map<string, UserData>()
+
+      await Promise.all(
+        uniqueUserIds.map(async userId => {
+          try {
+            const userData = await getUserData(userId)
+            if (userData) {
+              userDataMap.set(userId, userData)
+            }
+          } catch (error) {
+            console.error(`Error fetching user data for ${userId}:`, error)
+          }
+        })
+      )
+
+      setInternalUsersData(userDataMap)
+    }
+
+    if (activities.length > 0) {
+      fetchUserData()
+    }
+  }, [activities, usersDataMap])
+
   if (!activities || activities.length === 0) {
     return (
       <EmptyState
@@ -40,9 +75,13 @@ export function RecentActivityCard({ activities, usersDataMap }: RecentActivityC
         <ScrollArea className='h-[250px]'>
           <ul className='space-y-4'>
             {activities.map(activity => {
-              // Attempt to get user for avatar, fallback if not available
-              const user = usersDataMap?.get(activity.userId)
-              const userName = user?.displayName || user?.email || 'User'
+              // Use internal user data or fallback to prop-provided data
+              const user =
+                internalUsersData.get(activity.userId) || usersDataMap?.get(activity.userId)
+              const userName = resolveActorNameFromUserData(user, {
+                includeRole: true,
+                showUserIdInFallback: true,
+              })
               const userInitials = user?.displayName
                 ? user.displayName.substring(0, 2).toUpperCase()
                 : 'U'

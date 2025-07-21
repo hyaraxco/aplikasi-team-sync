@@ -1,21 +1,27 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
 import BadgePriority from '@/components/atomics/BadgePriority.atomic'
 import BadgeStatus from '@/components/atomics/BadgeStatus.atomic'
-import { Progress } from '@/components/atomics/Progress.atomic'
-import { Card, CardContent } from '@/components/molecules/Card.molecule'
-import { type Project, type Team } from '@/lib/firestore'
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Card,
+  CardContent,
+  Progress,
+} from '@/components/molecules'
+import type { Project, Team } from '@/types'
 import { format } from 'date-fns'
 import { Clock } from 'lucide-react'
 
 interface ProjectCardProps {
   project: Project & {
-    assignedTeams?: Team[]
+    assignedTeams?: (Team & { memberDetails?: any[] })[]
     metrics?: {
       totalTasks: number
       completedTasks: number
       completionRate: number
+      milestoneProgress?: number
     }
   }
   onClick?: () => void
@@ -23,9 +29,21 @@ interface ProjectCardProps {
 
 const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
   const deadlineDate = project.deadline ? project.deadline.toDate() : undefined
-  const progress = project.metrics?.completionRate || 0
+  const taskProgress = project.metrics?.completionRate || 0
+  const milestoneProgress = project.metrics?.milestoneProgress || 0
+
+  // Calculate overall progress (weighted average of task and milestone progress)
+  const progress =
+    project.milestones && project.milestones.length > 0
+      ? taskProgress * 0.7 + milestoneProgress * 0.3 // 70% task progress, 30% milestone progress
+      : taskProgress // If no milestones, use task progress only
+
   const completedTasks = project.metrics?.completedTasks || 0
   const totalTasks = project.metrics?.totalTasks || 0
+
+  // Safely get assigned teams and handle fallbacks
+  const assignedTeams = project.assignedTeams || []
+  const totalTeamCount = project.teams?.length || 0
 
   return (
     <Card
@@ -73,24 +91,31 @@ const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
               <span className='text-muted-foreground'>Tasks: </span>
               <span>
                 {completedTasks}/{totalTasks}
+                {totalTasks === 0 && (
+                  <span className='text-xs text-muted-foreground ml-1'>(No tasks yet)</span>
+                )}
               </span>
             </div>
             <div className='flex -space-x-2'>
-              {project.assignedTeams?.slice(0, 3).map(team => (
-                <Avatar key={team.id} className='h-6 w-6 border-2 border-background'>
-                  <AvatarImage
-                    src={team.memberDetails?.[0]?.photoURL || undefined}
-                    alt={team.name}
-                  />
-                  <AvatarFallback className='text-[10px]'>
-                    {team.name?.charAt(0).toUpperCase() || 'T'}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              {project.teams && project.teams.length > 3 && (
+              {assignedTeams.slice(0, 3).map((team: Team & { memberDetails?: any[] }) => {
+                // Try to get a member photo, fallback to team initial
+                const memberPhoto = team.memberDetails?.[0]?.photoURL
+                const teamInitial = team.name?.charAt(0).toUpperCase() || 'T'
+
+                return (
+                  <Avatar key={team.id} className='h-6 w-6 border-2 border-background'>
+                    <AvatarImage src={memberPhoto || undefined} alt={`${team.name} team`} />
+                    <AvatarFallback className='text-[10px]'>{teamInitial}</AvatarFallback>
+                  </Avatar>
+                )
+              })}
+              {totalTeamCount > 3 && (
                 <div className='flex items-center justify-center h-6 w-6 rounded-full bg-muted text-[10px] font-medium border-2 border-background'>
-                  +{project.teams.length - 3}
+                  +{totalTeamCount - 3}
                 </div>
+              )}
+              {totalTeamCount === 0 && (
+                <span className='text-xs text-muted-foreground'>No teams assigned</span>
               )}
             </div>
           </div>

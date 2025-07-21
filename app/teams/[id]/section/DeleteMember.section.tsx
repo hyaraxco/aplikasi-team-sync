@@ -1,6 +1,6 @@
 'use client'
 
-import { Button } from '@/components/atomics/Button.atomic'
+import { Button, Spinner } from '@/components/atomics'
 import {
   Dialog,
   DialogContent,
@@ -8,8 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/molecules/Dialog.molecule'
-import { Spinner } from '@/components/ui/spinner'
+} from '@/components/molecules'
 import type { EnrichedTeamMember } from './MemberTable.section'
 
 interface DeleteMemberDialogProps {

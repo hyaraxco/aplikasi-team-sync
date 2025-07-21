@@ -2,7 +2,8 @@
 
 import { useAuth } from '@/components/auth-provider'
 import { PageHeader } from '@/components/organisms/PageHeader'
-import { activateUser, getUsers, type UserData } from '@/lib/firestore'
+import { activateUser, getUsers } from '@/lib/database'
+import type { UserData } from '@/types'
 import { UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'

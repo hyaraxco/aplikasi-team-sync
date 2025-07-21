@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { ActivityActionType, addActivity, updateUserData, type UserData } from '@/lib/firestore'
+import { ActivityActionType, addActivity, updateUserData } from '@/lib/database'
+import { UserData } from '@/types'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'

@@ -1,5 +1,4 @@
-import { DashboardLayout } from '@/components/dashboard-layout'
-import { PayrollContent } from '@/components/payroll-content'
+import { DashboardLayout, PayrollContent } from '@/components/templates'
 
 export default function PayrollPage() {
   return (

@@ -18,13 +18,13 @@ module.exports = {
   // Arrow functions
   arrowParens: 'avoid',
 
-  // Line endings and whitespace
+  // Line endings and whitespace cleanup
   endOfLine: 'lf',
   insertPragma: false,
   requirePragma: false,
 
-  // JSX specific
-  jsxBracketSameLine: false,
+  // JSX specific (bracketSameLine replaces deprecated jsxBracketSameLine)
+  bracketSameLine: false,
 
   // Plugins for import organization and formatting
   plugins: [require.resolve('prettier-plugin-organize-imports')],
@@ -50,6 +50,18 @@ module.exports = {
         parser: 'markdown',
         printWidth: 80,
         proseWrap: 'always',
+      },
+    },
+    {
+      files: '*.{css,scss,less}',
+      options: {
+        parser: 'css',
+      },
+    },
+    {
+      files: '*.{yml,yaml}',
+      options: {
+        parser: 'yaml',
       },
     },
   ],

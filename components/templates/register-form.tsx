@@ -2,15 +2,15 @@
 
 import type React from 'react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/atomics/alert'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
 import { Spinner } from '@/components/atomics/spinner'
+import { createUserData } from '@/lib/database'
 import { auth } from '@/lib/firebase'
-import { createUserData } from '@/lib/firestore'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { useState } from 'react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
 
 export function RegisterForm() {
   const [name, setName] = useState('')
@@ -79,7 +79,7 @@ export function RegisterForm() {
 
   if (successMessage) {
     return (
-      <Alert variant='success'>
+      <Alert variant='default'>
         <AlertTitle>Registration Submitted</AlertTitle>
         <AlertDescription>{successMessage}</AlertDescription>
         <Button onClick={() => setSuccessMessage('')} className='mt-4 w-full'>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
+import { Skeleton } from '@/components/atomics/skeleton'
 import { useAuth } from '@/components/auth-provider'
 import {
   Card,
@@ -9,22 +10,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/card'
-import { useCallback, useEffect, useState } from 'react'
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
-
-import { Skeleton } from '@/components/atomics/skeleton'
-
 import {
   getAttendanceRecords,
   getTodaysAttendance,
   checkIn as newCheckIn,
   checkOut as newCheckOut,
-  type AttendanceRecord,
-} from '@/lib/firestore'
+} from '@/lib/database'
+import type { AttendanceRecord } from '@/types'
 import { format, getHours } from 'date-fns'
 import { Clock, Info, LogIn, LogOut } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
+import { useCallback, useEffect, useState } from 'react'
+import { Alert, AlertDescription, AlertTitle } from '../atomics/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../molecules'
 
 export function AttendanceContent() {
   const { user, userRole } = useAuth()
@@ -206,7 +203,7 @@ export function AttendanceContent() {
           </Alert>
         )}
         {statusMessage && (
-          <Alert variant={todaysAttendance?.checkOut ? 'success' : 'default'}>
+          <Alert variant={todaysAttendance?.checkOut ? 'destructive' : 'default'}>
             <Info className='h-4 w-4' />
             <AlertTitle>Status</AlertTitle>
             <AlertDescription>{statusMessage}</AlertDescription>

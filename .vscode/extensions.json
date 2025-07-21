@@ -24,10 +24,7 @@
     
     // Firebase support
     "toba.vsfire",
-    
-    // Testing
-    "ms-vscode.test-adapter-converter",
-    
+
     // Markdown support
     "yzhang.markdown-all-in-one"
   ],

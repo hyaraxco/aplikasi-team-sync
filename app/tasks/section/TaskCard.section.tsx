@@ -1,9 +1,8 @@
 'use client'
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules'
 import { Card, CardContent } from '@/components/molecules/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { cn, getPriorityBadge } from '@/lib/utils'
+import { cn } from '@/lib/ui'
 import { format } from 'date-fns'
 import { Calendar, CheckCircle, Clock, Eye, Hourglass, XCircle } from 'lucide-react'
 import React from 'react'
@@ -24,23 +23,22 @@ export interface TaskCardProps {
   assignee?: TaskCardAssignee
   onClick?: () => void
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'revision'
-}
-
-const getStatusLabel = (status: string): string => {
-  switch (status) {
-    case 'backlog':
-      return 'To Do'
-    case 'in_progress':
-      return 'In Progress'
-    case 'completed':
-      return 'For Review'
-    case 'done':
-      return 'Done'
-    case 'rejected':
-      return 'Rejected'
-    default:
-      return status
+  milestone?: {
+    id: string
+    title: string
+    dueDate: Date
   }
+  attachments?: {
+    id: string
+    fileName: string
+    fileUrl: string
+    fileSize: number
+    fileType: string
+    uploadedBy: string
+    uploadedByRole: 'admin' | 'employee'
+    uploadedAt: Date
+    attachmentType: 'context' | 'result' | 'feedback'
+  }[]
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -52,9 +50,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
   assignee,
   onClick,
   approvalStatus,
+  milestone,
 }) => {
   const isOverdue = status !== 'done' && new Date() > dueDate
-  const priorityBadge = getPriorityBadge(priority as any)
+  // Import the utility function inline to avoid import issues
+  const { getTaskPriorityBadgeConfig } = require('@/lib/ui')
+  const priorityBadge = getTaskPriorityBadgeConfig(priority as any)
   // Determine user role from context or props if needed
   // For this example, we'll use window.localStorage.getItem('userRole')
   let userRole: 'admin' | 'employee' = 'employee'
@@ -62,49 +63,30 @@ const TaskCard: React.FC<TaskCardProps> = ({
     userRole = (window.localStorage.getItem('userRole') as any) || 'employee'
   }
 
-  // Badge logic
+  // Badge logic using centralized utility
   let badge = null
-  if (userRole === 'admin') {
-    if (status === 'completed') {
-      badge = (
-        <span className='flex items-center gap-1 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium'>
-          <Hourglass className='h-4 w-4' /> Pending Approval
-        </span>
-      )
-    } else if (status === 'done') {
-      badge = (
-        <span className='flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium'>
-          <CheckCircle className='h-4 w-4' /> Approved
-        </span>
-      )
-    } else if (status === 'rejected') {
-      badge = (
-        <span className='flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium'>
-          <XCircle className='h-4 w-4' /> Rejected
-        </span>
-      )
+
+  // Only show badges for specific statuses that need visual indication
+  if (['completed', 'done', 'rejected', 'revision'].includes(status)) {
+    // Import the utility function inline to avoid import issues
+    const { getTaskStatusBadgeConfig } = require('@/lib/ui')
+    const badgeConfig = getTaskStatusBadgeConfig(status as any, userRole)
+
+    // Icon mapping for different statuses
+    const iconMap = {
+      completed: userRole === 'admin' ? Hourglass : Eye,
+      done: CheckCircle,
+      rejected: XCircle,
+      revision: XCircle,
     }
-  } else {
-    // employee
-    if (status === 'completed') {
-      badge = (
-        <span className='flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium'>
-          <Eye className='h-4 w-4' /> In Review
-        </span>
-      )
-    } else if (status === 'done') {
-      badge = (
-        <span className='flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium'>
-          <CheckCircle className='h-4 w-4' /> Approved
-        </span>
-      )
-    } else if (status === 'rejected') {
-      badge = (
-        <span className='flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium'>
-          <XCircle className='h-4 w-4' /> Revision
-        </span>
-      )
-    }
+
+    const IconComponent = iconMap[status as keyof typeof iconMap]
+
+    badge = (
+      <span className={badgeConfig.className}>
+        {IconComponent && <IconComponent className='h-4 w-4' />} {badgeConfig.text}
+      </span>
+    )
   }
 
   return (
@@ -113,11 +95,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <div className='space-y-2'>
           <div className='flex justify-between items-start gap-2'>
             <h3 className='font-medium line-clamp-2'>{name}</h3>
-            <Badge className={cn('text-xs font-normal', priorityBadge.color)}>{priority}</Badge>
+            <span className={priorityBadge.className}>{priorityBadge.text}</span>
           </div>
 
           {description && (
             <p className='text-sm text-muted-foreground line-clamp-2'>{description}</p>
+          )}
+
+          {/* Milestone Badge */}
+          {milestone && (
+            <div className='mt-2'>
+              <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
+                📍 {milestone.title}
+              </span>
+            </div>
           )}
 
           {/* Status Badge */}

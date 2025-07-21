@@ -1,14 +1,6 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
-import { useAuth } from '@/components/auth-provider'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/molecules/card'
 import {
   Table,
   TableBody,
@@ -17,28 +9,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/atomics/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
+import { useAuth } from '@/components/auth-provider'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/molecules/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules/tabs'
 import { useEffect, useState } from 'react'
 
 import { Skeleton } from '@/components/atomics/skeleton'
 
+import { Alert, AlertDescription } from '@/components/atomics/alert'
+import { Badge } from '@/components/atomics/badge'
 import { MonthPicker } from '@/components/molecules/AntDatePicker'
+import { getAttendanceRecords, getPayrollRecords, getTasks } from '@/lib/database'
 import { db } from '@/lib/firebase'
-import {
-  getAttendanceRecords,
-  getPayrollRecords,
-  getTasks,
-  type AttendanceRecord,
-  type Payroll,
-  type Task,
-  type UserData,
-} from '@/lib/firestore'
-import { formatRupiah } from '@/lib/utils'
+import { formatRupiah } from '@/lib/ui'
+import type { AttendanceRecord, Payroll, Task, UserData } from '@/types'
 import { format } from 'date-fns'
 import { collection, getDocs } from 'firebase/firestore'
 import { Download, FileText } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
-import { Badge } from '@/components/atomics/badge'
 
 export function PayrollContent() {
   const { user, userRole } = useAuth()

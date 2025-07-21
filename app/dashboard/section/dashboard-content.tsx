@@ -1,10 +1,9 @@
 'use client'
 
 import { ActivityFeed } from '@/app/dashboard/section/activity-feed'
-import { useAuth } from '@/components/auth-provider'
-import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import { Skeleton } from '@/components/atomics/skeleton'
+import { useAuth } from '@/components/auth-provider'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import {
   formatRupiah,
   getAttendanceRecords,
@@ -111,9 +110,9 @@ export function DashboardContent() {
       </div>
 
       {error && (
-        <Alert variant='destructive'>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className='rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive'>
+          {error}
+        </div>
       )}
 
       {/* Overview dashboard */}

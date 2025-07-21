@@ -1,14 +1,19 @@
-import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Skeleton } from '@/components/atomics/skeleton'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Bell } from 'lucide-react'
 import NotificationItem from './NotificationItem.section'
 
 interface AllNotifTabProps {
   notifications: any[]
   loading: boolean
+  onNotificationRead?: (notificationId: string) => void
 }
 
-export default function AllNotifTab({ notifications, loading }: AllNotifTabProps) {
+export default function AllNotifTab({
+  notifications,
+  loading,
+  onNotificationRead,
+}: AllNotifTabProps) {
   if (loading) {
     return (
       <div className='space-y-4 p-4'>
@@ -40,7 +45,11 @@ export default function AllNotifTab({ notifications, loading }: AllNotifTabProps
   return (
     <div>
       {notifications.map(notif => (
-        <NotificationItem key={notif.id} notification={notif} />
+        <NotificationItem
+          key={notif.id}
+          notification={notif}
+          onNotificationRead={onNotificationRead}
+        />
       ))}
     </div>
   )

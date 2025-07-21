@@ -5,6 +5,8 @@ import type React from 'react'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
+import { Spinner } from '@/components/atomics/spinner'
+import { Textarea } from '@/components/atomics/textarea'
 import { useAuth } from '@/components/auth-provider'
 import {
   Dialog,
@@ -14,9 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Spinner } from '@/components/ui/spinner'
-import { Textarea } from '@/components/ui/textarea'
-import { ActivityActionType, addActivity, updateTeam } from '@/lib/firestore'
+import { ActivityActionType, addActivity, updateTeam } from '@/lib/database'
 import { serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'

@@ -1,5 +1,5 @@
-import { ProjectStatus } from '@/lib/firestore'
-import { cn, getStatusBadge } from '@/lib/utils'
+import { cn, getStatusBadge } from '@/lib/ui'
+import { ProjectStatus } from '@/types'
 
 interface BadgeStatusProps {
   status: ProjectStatus

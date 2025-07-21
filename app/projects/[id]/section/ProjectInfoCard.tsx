@@ -1,5 +1,7 @@
 'use client'
 
+import BadgePriority from '@/components/atomics/BadgePriority.atomic'
+import BadgeStatus from '@/components/atomics/BadgeStatus.atomic'
 import {
   Card,
   CardContent,
@@ -7,10 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/card'
+import { ProjectPriority, ProjectStatus } from '@/types'
 
-import BadgePriority from '@/components/atomics/BadgePriority.atomic'
-import BadgeStatus from '@/components/atomics/BadgeStatus.atomic'
-import { ProjectPriority, ProjectStatus } from '@/lib/firestore'
 import { format } from 'date-fns'
 import { Clock } from 'lucide-react'
 

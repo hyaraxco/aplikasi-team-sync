@@ -1,8 +1,8 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
-import { Progress } from '@/components/atomics/progress'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules/avatar'
 import { Card } from '@/components/molecules/card'
+import { Progress } from '@/components/molecules/progress'
 import { Team } from '@/lib/firestore'
 import { Users } from 'lucide-react'
 

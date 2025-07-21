@@ -1,10 +1,11 @@
+import { Alert, AlertDescription } from '@/components/atomics/alert'
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules/tabs'
 import { PageHeader } from '@/components/organisms/PageHeader'
-import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
+import { markAllActivitiesAsRead } from '@/lib/database'
 import { db } from '@/lib/firebase'
-import { type Activity, markAllActivitiesAsRead } from '@/lib/firestore'
+import type { Activity } from '@/types'
 import {
   collection,
   doc,
@@ -157,8 +158,8 @@ export default function NotificationContent() {
   const handleMarkAllAsRead = async () => {
     if (!user && userRole !== 'admin') return
 
-    setLoading(true) // Bisa juga setLoadingUnread dan setLoading
-    setLoadingUnread(true)
+    // Only show loading for the button, not the entire lists
+    setError(null)
 
     if (userRole === 'admin') {
       // Admin menandai semua notifikasi sistem yang unread
@@ -172,7 +173,8 @@ export default function NotificationContent() {
         await batch.commit()
       } catch (error) {
         console.error('Error marking all system activities as read:', error)
-        setError('Failed to mark all as read') // Tampilkan error jika gagal
+        setError('Failed to mark all as read')
+        return
       }
     } else if (user) {
       // Employee menandai notifikasi unread miliknya
@@ -181,18 +183,28 @@ export default function NotificationContent() {
       } catch (error) {
         console.error('Error marking employee activities as read:', error)
         setError('Failed to mark all as read')
+        return
       }
     }
-    // Refresh kedua tab
-    await fetchAllNotificationsForTab()
-    await fetchUnreadNotificationsForTab()
-    setLoading(false)
-    setLoadingUnread(false)
+
+    // Reactively update the state instead of full reload
+    // Mark all current unread notifications as read in state
+    setNotifications(prev => prev.map(notif => ({ ...notif, status: 'read' })))
+    setUnreadNotifications([]) // Clear unread list
   }
 
   const handleRefresh = () => {
     fetchAllNotificationsForTab()
     fetchUnreadNotificationsForTab()
+  }
+
+  // Handle individual notification read
+  const handleNotificationRead = (notificationId: string) => {
+    // Update the notification status in both lists reactively
+    setNotifications(prev =>
+      prev.map(notif => (notif.id === notificationId ? { ...notif, status: 'read' } : notif))
+    )
+    setUnreadNotifications(prev => prev.filter(notif => notif.id !== notificationId))
   }
 
   // Filter & sort logic HANYA untuk tab All
@@ -300,10 +312,18 @@ export default function NotificationContent() {
         </TabsList>
 
         <TabsContent value='all'>
-          <AllNotifTab notifications={filteredForAllTab} loading={loading} />
+          <AllNotifTab
+            notifications={filteredForAllTab}
+            loading={loading}
+            onNotificationRead={handleNotificationRead}
+          />
         </TabsContent>
         <TabsContent value='unread'>
-          <UnreadNotifTab notifications={unreadNotifications} loading={loadingUnread} />
+          <UnreadNotifTab
+            notifications={unreadNotifications}
+            loading={loadingUnread}
+            onNotificationRead={handleNotificationRead}
+          />
         </TabsContent>
       </Tabs>
     </div>

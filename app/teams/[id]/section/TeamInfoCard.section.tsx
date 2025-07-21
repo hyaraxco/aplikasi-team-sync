@@ -1,7 +1,7 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
 import { Button } from '@/components/atomics/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules'
 import {
   Card,
   CardContent,

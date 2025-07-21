@@ -3,6 +3,8 @@
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
+import { Skeleton } from '@/components/atomics/skeleton' // Import Skeleton
+import { Textarea } from '@/components/atomics/textarea'
 import { useAuth } from '@/components/auth-provider'
 import {
   Dialog,
@@ -12,42 +14,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Skeleton } from '@/components/atomics/skeleton' // Import Skeleton
-import { Textarea } from '@/components/atomics/textarea'
 import { useRouter } from 'next/navigation'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import ProjectCard from './ProjectCard.section' // Import the new ProjectCard
 
-import {
-  ProjectPriority,
-  ProjectStatus,
-  createProject,
-  getProjects,
-  getTasks,
-  getTeams,
-  getUsers,
-  type Project,
-  type Team,
-  type UserData,
-} from '@/lib/firestore'
+import { createProject, getProjects, getTasks, getTeams, getUsers } from '@/lib/database'
+import type { Project, ProjectPriority, ProjectStatus, Team, UserData } from '@/types'
 import { Timestamp } from 'firebase/firestore'
 import ProjectFilterBar from './ProjectFilterBar.section'
 
+// Define the available options for priority and status
+const PRIORITY_OPTIONS: ProjectPriority[] = ['low', 'medium', 'high']
+const STATUS_OPTIONS: ProjectStatus[] = ['planning', 'in-progress', 'completed', 'on-hold']
+
+import { Alert, AlertDescription } from '@/components/atomics/alert'
+import { Badge } from '@/components/atomics/badge'
+import { DatePicker } from '@/components/molecules/AntDatePicker'
 import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { PageHeader } from '@/components/organisms/PageHeader'
-import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
-import { DatePicker } from '@/components/molecules/AntDatePicker'
+
 import {
+  ScrollArea,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/molecules/Select.molecule'
-import { Badge } from '@/components/atomics/badge'
-import { ScrollArea } from '@/components/atomics/scroll-area'
-import { formatCurrencyInput, parseCurrencyInput } from '@/lib/utils'
+} from '@/components/molecules'
+import { formatCurrencyInput, parseCurrencyInput } from '@/lib/ui'
 import { CircleX, FolderKanban, FolderPlus, Loader2 } from 'lucide-react'
 
 export function ProjectsContent() {
@@ -55,12 +50,22 @@ export function ProjectsContent() {
   const { user, userRole } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [projects, setProjects] = useState<Project[]>([])
+  const [projects, setProjects] = useState<
+    (Project & {
+      assignedTeams?: (Team & { memberDetails?: any[] })[]
+      metrics?: {
+        totalTasks: number
+        completedTasks: number
+        completionRate: number
+        milestoneProgress?: number
+      }
+    })[]
+  >([])
   const [teams, setTeams] = useState<Team[]>([])
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [selectedTeams, setSelectedTeams] = useState<string[]>([])
-  const [projectStatus, setProjectStatus] = useState<ProjectStatus>(ProjectStatus.Planning)
-  const [projectPriority, setProjectPriority] = useState<ProjectPriority>(ProjectPriority.Low)
+  const [projectStatus, setProjectStatus] = useState<ProjectStatus>('planning')
+  const [projectPriority, setProjectPriority] = useState<ProjectPriority>('low')
   const [projectFormData, setProjectFormData] = useState<{
     name: string
     description: string
@@ -106,21 +111,98 @@ export function ProjectsContent() {
         const teamsData = await getTeams(user?.uid, userRole || undefined)
         const usersData = await getUsers()
 
-        // Fetch metrics for each project dari seluruh task project
+        // Fetch enhanced metrics for each project including team data and milestone progress
         const projectsWithMetrics = await Promise.all(
           projectsData.map(async project => {
-            // Fetch seluruh task untuk project ini
-            const allTasks = await getTasks(undefined, project.id)
-            const totalTasks = allTasks.length
-            const completedTasks = allTasks.filter(t => t.status === 'completed').length
-            const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
-            return {
-              ...project,
-              metrics: {
-                totalTasks,
-                completedTasks,
-                completionRate,
-              },
+            try {
+              // Fetch all tasks for this project
+              const allTasks = await getTasks(undefined, project.id)
+              const totalTasks = allTasks.length
+
+              // Count completed tasks (both 'completed' and 'done' statuses)
+              const completedTasks = allTasks.filter(
+                t => t.status === 'completed' || t.status === 'done'
+              ).length
+
+              const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
+
+              // Fetch assigned teams with member details
+              const assignedTeams: Team[] = []
+              if (project.teams && project.teams.length > 0) {
+                for (const teamId of project.teams) {
+                  try {
+                    // Import functions dynamically to avoid import issues
+                    const { getTeamById, getUserData } = await import('@/lib/database')
+                    const team = await getTeamById(teamId)
+                    if (team) {
+                      // Fetch member details for team avatars
+                      const memberDetails = await Promise.all(
+                        team.members.slice(0, 3).map(async (member: any) => {
+                          const userData = await getUserData(member.userId)
+                          return userData
+                        })
+                      )
+                      assignedTeams.push({
+                        ...team,
+                        memberDetails: memberDetails.filter(
+                          (detail): detail is UserData => detail !== null
+                        ),
+                      })
+                    }
+                  } catch (error) {
+                    console.error(`Error fetching team ${teamId}:`, error)
+                  }
+                }
+              }
+
+              // Calculate milestone progress if milestones exist
+              let milestoneProgress = 0
+              if (project.milestones && project.milestones.length > 0) {
+                try {
+                  const { getMilestoneProgress } = await import('@/lib/database')
+                  const milestoneProgresses = project.milestones.map(milestone => {
+                    const progressData = getMilestoneProgress(milestone, allTasks)
+                    return progressData.progress
+                  })
+                  milestoneProgress =
+                    milestoneProgresses.length > 0
+                      ? milestoneProgresses.reduce((sum, progress) => sum + progress, 0) /
+                        milestoneProgresses.length
+                      : 0
+                } catch (error) {
+                  console.error('Error calculating milestone progress:', error)
+                }
+              }
+
+              return {
+                ...project,
+                assignedTeams,
+                metrics: {
+                  totalTasks,
+                  completedTasks,
+                  completionRate,
+                  milestoneProgress,
+                  pendingTasks: totalTasks - completedTasks,
+                  totalTeams: assignedTeams.length,
+                  activeMilestones: project.milestones?.length || 0,
+                },
+              }
+            } catch (error) {
+              console.error(`Error processing project ${project.id}:`, error)
+              // Return project with basic metrics on error
+              return {
+                ...project,
+                assignedTeams: [],
+                metrics: {
+                  totalTasks: 0,
+                  completedTasks: 0,
+                  completionRate: 0,
+                  milestoneProgress: 0,
+                  pendingTasks: 0,
+                  totalTeams: 0,
+                  activeMilestones: 0,
+                },
+              }
             }
           })
         )
@@ -238,8 +320,8 @@ export function ProjectsContent() {
       })
       setDisplayBudget('')
       setSelectedTeams([])
-      setProjectStatus(ProjectStatus.Planning)
-      setProjectPriority(ProjectPriority.Low)
+      setProjectStatus('planning')
+      setProjectPriority('low')
     } catch (error) {
       console.error('Error creating project:', error)
       setError('Failed to create project. Please try again later.')
@@ -517,7 +599,7 @@ export function ProjectsContent() {
                       <SelectValue placeholder='Select status' />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(ProjectStatus).map(status => (
+                      {STATUS_OPTIONS.map(status => (
                         <SelectItem key={status} value={status}>
                           {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
                         </SelectItem>
@@ -535,7 +617,7 @@ export function ProjectsContent() {
                       <SelectValue placeholder='Select priority' />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(ProjectPriority).map(priority => (
+                      {PRIORITY_OPTIONS.map(priority => (
                         <SelectItem key={priority} value={priority}>
                           {priority.charAt(0).toUpperCase() + priority.slice(1)}
                         </SelectItem>

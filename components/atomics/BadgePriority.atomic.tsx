@@ -1,5 +1,5 @@
-import { ProjectPriority } from '@/lib/firestore'
-import { cn, getPriorityBadge } from '@/lib/utils'
+import { cn, getPriorityBadge } from '@/lib/ui'
+import { ProjectPriority } from '@/types'
 
 interface BadgePriorityProps {
   priority: ProjectPriority

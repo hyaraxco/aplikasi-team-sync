@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
+import { Skeleton } from '@/components/atomics/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -16,17 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Skeleton } from '@/components/atomics/skeleton'
 
 // Import komponen baru
 import TeamCard from '@/app/teams/section/TeamCard.section'
+import { Alert, AlertDescription } from '@/components/atomics/alert'
 import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { PageHeader } from '@/components/organisms/PageHeader'
-import TeamFilterBar from './TeamFilterBar.section'
-
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
-import { Textarea } from '@/components/atomics/Textarea.atomic'
-import { Alert, AlertDescription } from '@/components/molecules/Alert.molecule'
 import {
   createTeam,
   getTeamMetrics,
@@ -36,10 +32,12 @@ import {
   type Team,
   type TeamMember,
   type UserData,
-} from '@/lib/firestore'
+} from '@/lib/database'
 import { Loader2, UserRoundPlus, Users2 } from 'lucide-react'
+import TeamFilterBar from './TeamFilterBar.section'
 
-import { Popover } from '@/components/atomics/popover'
+import { Textarea } from '@/components/atomics'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules'
 import {
   Command,
   CommandEmpty,
@@ -48,7 +46,8 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/molecules/command'
-import { cn } from '@/lib/utils'
+import { Popover } from '@/components/molecules/popover'
+import { cn } from '@/lib/ui'
 import { PopoverContent, PopoverTrigger } from '@radix-ui/react-popover'
 import { Check, ChevronsUpDown } from 'lucide-react'
 

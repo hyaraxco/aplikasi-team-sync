@@ -1,7 +1,7 @@
 'use client'
 
-import { Avatar, AvatarImage } from '@/components/atomics/Avatar.atomic'
 import { Button } from '@/components/atomics/button'
+import { Avatar, AvatarImage } from '@/components/molecules/avatar'
 import { Card, CardContent } from '@/components/molecules/card'
 import { CheckCircle2, Edit, Mail, Phone, Trash2Icon, User, XCircle } from 'lucide-react'
 
@@ -15,8 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/atomics/table'
-import { type UserData } from '@/lib/firestore'
-import { formatDate, formatRupiah } from '@/lib/utils'
+import { formatDate, formatRupiah } from '@/lib/ui'
+import type { UserData } from '@/types'
 
 interface UserTableProps {
   users: UserData[]
