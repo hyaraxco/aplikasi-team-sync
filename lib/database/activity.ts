@@ -1010,3 +1010,66 @@ export function formatActivities(
     return formatActivity(activity, actorName, options)
   })
 }
+
+/**
+ * Formats an activity record into a human-readable message with both actor and target user data
+ *
+ * @param activity - The activity record to format
+ * @param actorUser - UserData of the actor (who did the action)
+ * @param targetUser - UserData of the target (who/what is affected, can be null)
+ * @param options - Optional formatting options
+ * @returns A formatted string describing the activity
+ */
+export function formatActivityMessageWithUsers(
+  activity: Activity,
+  actorUser: UserData | null | undefined,
+  targetUser: UserData | null | undefined,
+  options: ActorNameOptions = {}
+): string {
+  const actorName = resolveActorNameFromUserData(actorUser, options)
+  const targetName = targetUser ? resolveActorNameFromUserData(targetUser, options) : undefined
+  const details = activity.details || {}
+  const target = getActivityTarget(activity)
+
+  // Example for task-related actions
+  if (activity.type === 'task') {
+    switch (activity.action as ActivityActionType) {
+      case ActivityActionType.TASK_REVISION_REQUESTED: {
+        const note = details.note || details.revisionNote
+        if (targetName && actorName !== targetName) {
+          return `${actorName} requested a revision for ${targetName}'s task "${target}": ${note || ''}`.trim()
+        } else {
+          return `${actorName} requested a revision for their own task "${target}": ${note || ''}`.trim()
+        }
+      }
+      case ActivityActionType.TASK_ASSIGNED: {
+        if (targetName && actorName !== targetName) {
+          return `${actorName} assigned task "${target}" to ${targetName}`
+        } else {
+          return `${actorName} was assigned task "${target}"`
+        }
+      }
+      case ActivityActionType.TASK_APPROVED_WITH_EARNING:
+      case ActivityActionType.TASK_APPROVED_NO_EARNING: {
+        if (targetName && actorName !== targetName) {
+          return `${actorName} approved ${targetName}'s task "${target}"`
+        } else {
+          return `${actorName} approved their own task "${target}"`
+        }
+      }
+      case ActivityActionType.TASK_SUBMITTED_FOR_REVIEW: {
+        if (targetName && actorName !== targetName) {
+          return `${actorName} submitted task "${target}" for review to ${targetName}`
+        } else {
+          return `${actorName} submitted task "${target}" for review`
+        }
+      }
+      // Fallback to default
+      default: {
+        return formatActivityMessage(activity, actorName)
+      }
+    }
+  }
+  // For other types, fallback to default
+  return formatActivityMessage(activity, actorName)
+}

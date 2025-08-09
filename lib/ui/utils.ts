@@ -172,8 +172,8 @@ export const getTaskStatusBadge = (
       hexColor: '#059669',
     },
     rejected: {
-      color: 'bg-red-600',
-      hexColor: '#dc2626',
+      color: 'bg-orange-500', // Same as revision - consolidated styling
+      hexColor: '#f97316',
     },
     blocked: {
       color: 'bg-rose-600',
@@ -204,7 +204,7 @@ export const getTaskStatusBadgeConfig = (
     completed: { admin: 'Pending Approval', employee: 'In Review' },
     revision: { admin: 'Needs Revision', employee: 'Needs Revision' },
     done: { admin: 'Approved', employee: 'Approved' },
-    rejected: { admin: 'Rejected', employee: 'Revision' },
+    rejected: { admin: 'Needs Revision', employee: 'Needs Revision' }, // Consolidated with revision
     blocked: { admin: 'Blocked', employee: 'Blocked' },
   }
 
@@ -232,6 +232,64 @@ export const getTaskStatusBadgeConfig = (
     className: `${baseClasses} ${colorClass}`,
     bgColor: baseConfig.hexColor,
   }
+}
+
+/**
+ * User status type definition
+ */
+export type UserStatus = 'active' | 'inactive' | 'pending' | 'on leave' | 'suspended'
+
+/**
+ * Gets badge configuration for user status with dark mode support
+ * Provides consistent styling across all components with proper accessibility
+ *
+ * @param status - User status value
+ * @returns Badge configuration with Tailwind classes for light/dark mode
+ *
+ * @example
+ * ```typescript
+ * const config = getUserStatusBadge('pending');
+ * <Badge className={config.className}>{config.text}</Badge>
+ * ```
+ */
+export const getUserStatusBadge = (status: string | undefined | null) => {
+  const normalizedStatus = status?.toLowerCase() as UserStatus
+
+  const statusConfig: Record<UserStatus, { className: string; text: string }> = {
+    active: {
+      className:
+        'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
+      text: 'Active',
+    },
+    inactive: {
+      className:
+        'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700',
+      text: 'Inactive',
+    },
+    pending: {
+      className:
+        'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
+      text: 'Pending',
+    },
+    'on leave': {
+      className:
+        'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
+      text: 'On Leave',
+    },
+    suspended: {
+      className:
+        'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+      text: 'Suspended',
+    },
+  }
+
+  return (
+    statusConfig[normalizedStatus] || {
+      className:
+        'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-700',
+      text: status || 'Unknown',
+    }
+  )
 }
 
 /**

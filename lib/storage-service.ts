@@ -10,7 +10,12 @@ export interface UploadResult {
 }
 
 export interface StorageService {
-  upload(file: File, path: string, attachmentType: string): Promise<UploadResult>
+  upload(
+    file: File,
+    path: string,
+    attachmentType: string,
+    onProgress?: (progress: number) => void
+  ): Promise<UploadResult>
   delete(attachment: TaskAttachment): Promise<boolean>
   getDownloadUrl(attachment: TaskAttachment): string
 }
@@ -19,13 +24,18 @@ export interface StorageService {
  * Cloudinary Storage Service
  */
 class CloudinaryStorageService implements StorageService {
-  async upload(file: File, path: string, attachmentType: string): Promise<UploadResult> {
+  async upload(
+    file: File,
+    path: string,
+    attachmentType: string,
+    onProgress?: (progress: number) => void
+  ): Promise<UploadResult> {
     try {
       // Create folder structure: tasks/taskId/attachmentType
       const folder = `team-sync/${path}/${attachmentType}`
 
       // Upload to Cloudinary using simplified function (same as working browser test)
-      const result = await uploadToCloudinary(file, folder)
+      const result = await uploadToCloudinary(file, folder, onProgress)
 
       return {
         url: result.url,

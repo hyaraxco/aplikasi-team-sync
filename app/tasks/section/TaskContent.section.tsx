@@ -186,6 +186,9 @@ export function TasksContent() {
             : task.status === 'revision'
               ? 'rejected'
               : undefined,
+      attachments: task.attachments || [],
+      employeeComment: (task as any).employeeComment,
+      reviewComment: (task as any).reviewComment,
     }
   }
 
@@ -448,7 +451,7 @@ export function TasksContent() {
       completed: filtered.filter(task => task.status === 'completed'),
       done: filtered.filter(
         task => task.status === 'done' || task.status === 'rejected' || task.status === 'revision'
-      ),
+      ), // Consolidated: revision and rejected both appear in done column
     }
   }
 
@@ -510,6 +513,7 @@ export function TasksContent() {
               .map((n: string) => n[0])
               .join('') || 'UN',
         },
+        attachments: [],
       }
 
       setTasks(prev => ({ ...prev, backlog: [...prev.backlog, newTask] }))
@@ -933,7 +937,6 @@ export function TasksContent() {
         isOpen={isDetailSidebarOpen}
         userRole={userRole}
         onOpenChange={setIsDetailSidebarOpen}
-        onUpdateTask={handleUpdateTask}
         onDataRefresh={refreshTaskData}
       />
 

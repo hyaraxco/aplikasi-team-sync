@@ -3,7 +3,7 @@
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
-import { Skeleton } from '@/components/atomics/skeleton' // Import Skeleton
+import { Skeleton } from '@/components/atomics/skeleton'
 import { Textarea } from '@/components/atomics/textarea'
 import { useAuth } from '@/components/auth-provider'
 import {
@@ -17,7 +17,7 @@ import {
 import { useRouter } from 'next/navigation'
 import type React from 'react'
 import { useEffect, useState } from 'react'
-import ProjectCard from './ProjectCard.section' // Import the new ProjectCard
+import ProjectCard from './ProjectCard.section'
 
 import { createProject, getProjects, getTasks, getTeams, getUsers } from '@/lib/database'
 import type { Project, ProjectPriority, ProjectStatus, Team, UserData } from '@/types'
@@ -43,7 +43,56 @@ import {
   SelectValue,
 } from '@/components/molecules'
 import { formatCurrencyInput, parseCurrencyInput } from '@/lib/ui'
-import { CircleX, FolderKanban, FolderPlus, Loader2 } from 'lucide-react'
+import { CircleX, FolderKanban, FolderPlus, Loader2, Users, CheckCircle, AlertTriangle } from 'lucide-react'
+// SummaryCard component for dashboard widgets
+function SummaryCard({ title, value, icon, color }: { title: string; value: number | string; icon: React.ReactNode; color?: string }) {
+  return (
+    <div className={`flex items-center gap-3 rounded-lg border bg-card text-card-foreground shadow-sm p-4 min-h-[80px] ${color || ''}`}>
+      <div className="flex items-center justify-center rounded-full bg-muted p-2">{icon}</div>
+      <div className="flex flex-col">
+        <span className="text-lg font-semibold">{value}</span>
+        <span className="text-xs text-muted-foreground">{title}</span>
+      </div>
+    </div>
+  )
+}
+
+// RecentActivity widget for dashboard
+function RecentActivity({ projects }: { projects: (Project & { metrics?: any })[] }) {
+  // Sort by latest deadline or createdAt (if available)
+  const sorted = [...projects]
+    .sort((a, b) => {
+      // Prefer deadline, fallback to createdAt
+      const aTime = a.deadline?.toDate?.().getTime?.() || a.createdAt?.toDate?.().getTime?.() || 0;
+      const bTime = b.deadline?.toDate?.().getTime?.() || b.createdAt?.toDate?.().getTime?.() || 0;
+      return bTime - aTime;
+    })
+    .slice(0, 5);
+  if (sorted.length === 0) {
+    return (
+      <div className="rounded-lg border bg-card p-4 text-muted-foreground text-sm">No recent activity.</div>
+    );
+  }
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="font-semibold mb-2 text-sm">Recent Activity</div>
+      <ul className="divide-y divide-muted">
+        {sorted.map((project) => (
+          <li key={project.id} className="py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-1">
+            <div className="flex items-center gap-2">
+              <FolderKanban className="w-4 h-4 text-primary" />
+              <span className="font-medium">{project.name}</span>
+              <span className="text-xs text-muted-foreground">{project.status.charAt(0).toUpperCase() + project.status.slice(1).replace('-', ' ')}</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {project.deadline?.toDate?.() ? `Deadline: ${project.deadline.toDate().toLocaleDateString()}` : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function ProjectsContent() {
   const router = useRouter()
@@ -401,6 +450,39 @@ export function ProjectsContent() {
 
   return (
     <div className='flex flex-col gap-4'>
+      {/* Dashboard Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <SummaryCard
+          title="Total Projects"
+          value={projects.length}
+          icon={<FolderKanban className="w-6 h-6 text-primary" />}
+        />
+        <SummaryCard
+          title="In Progress"
+          value={projects.filter(p => p.status === 'in-progress').length}
+          icon={<Loader2 className="w-6 h-6 text-blue-500" />}
+        />
+        <SummaryCard
+          title="Completed"
+          value={projects.filter(p => p.status === 'completed').length}
+          icon={<CheckCircle className="w-6 h-6 text-green-500" />}
+        />
+        <SummaryCard
+          title="Teams"
+          value={teams.length}
+          icon={<Users className="w-6 h-6 text-violet-500" />}
+        />
+        {userRole === 'admin' && (
+          <SummaryCard
+            title="On Hold"
+            value={projects.filter(p => p.status === 'on-hold').length}
+            icon={<AlertTriangle className="w-6 h-6 text-yellow-500" />}
+          />
+        )}
+      </div>
+
+      {/* Recent Activity Widget */}
+      <RecentActivity projects={projects} />
       <PageHeader
         title='Projects'
         description={

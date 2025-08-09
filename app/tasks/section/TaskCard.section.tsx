@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules'
 import { Card, CardContent } from '@/components/molecules/card'
 import { cn } from '@/lib/ui'
+import { TaskAttachment } from '@/types'
 import { format } from 'date-fns'
 import { Calendar, CheckCircle, Clock, Eye, Hourglass, XCircle } from 'lucide-react'
 import React from 'react'
@@ -28,17 +29,9 @@ export interface TaskCardProps {
     title: string
     dueDate: Date
   }
-  attachments?: {
-    id: string
-    fileName: string
-    fileUrl: string
-    fileSize: number
-    fileType: string
-    uploadedBy: string
-    uploadedByRole: 'admin' | 'employee'
-    uploadedAt: Date
-    attachmentType: 'context' | 'result' | 'feedback'
-  }[]
+  attachments?: TaskAttachment[]
+  employeeComment?: string
+  reviewComment?: string
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -76,8 +69,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
     const iconMap = {
       completed: userRole === 'admin' ? Hourglass : Eye,
       done: CheckCircle,
-      rejected: XCircle,
-      revision: XCircle,
+      rejected: XCircle, // Consolidated: same icon as revision
+      revision: XCircle, // Consolidated: same icon as rejected
     }
 
     const IconComponent = iconMap[status as keyof typeof iconMap]

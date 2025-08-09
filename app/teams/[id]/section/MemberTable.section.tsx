@@ -1,6 +1,5 @@
 'use client'
 
-import { Badge } from '@/components/atomics/badge'
 import { Button } from '@/components/atomics/button'
 import {
   Table,
@@ -224,34 +223,6 @@ export function MembersTable({
     return filtered
   }, [members, searchTerm, filterRoles, filterStatus, sort, currentSortDir])
 
-  const getStatusBadge = (member: TeamMember) => {
-    const statusValue = member.status ? member.status.toLowerCase() : ''
-    switch (statusValue) {
-      case 'active':
-        return (
-          <Badge className='bg-green-100 text-green-700 border-green-200'>{member.status}</Badge>
-        )
-      case 'inactive':
-        return (
-          <Badge variant='outline' className='border-gray-300 text-gray-600'>
-            {member.status}
-          </Badge>
-        )
-      case 'on leave':
-        return (
-          <Badge variant='secondary' className='bg-yellow-100 text-yellow-700 border-yellow-200'>
-            {member.status}
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant='outline' className='border-gray-300 text-gray-600'>
-            Unknown
-          </Badge>
-        )
-    }
-  }
-
   return (
     <div className='space-y-4'>
       <MemberFilterBar
@@ -350,7 +321,9 @@ export function MembersTable({
                       {member.role || 'N/A'}
                       {user && <span className='flex items-center text-xs'>{user.department}</span>}
                     </TableCell>
-                    <TableCell>{getStatusBadge(member)}</TableCell>
+                    <TableCell>
+                      <UserStatusBadge status={member.status} />
+                    </TableCell>
                     <TableCell className='text-xs'>{joinDate}</TableCell>
                     <TableCell className={`${isAdmin ? 'text-right pr-2' : 'text-center'}`}>
                       <div

@@ -206,6 +206,8 @@ export interface Task {
   teamId?: string
   comments?: TaskComment[]
   attachments?: TaskAttachment[]
+  employeeComment?: string
+  reviewComment?: string
 }
 
 // ============================================================================

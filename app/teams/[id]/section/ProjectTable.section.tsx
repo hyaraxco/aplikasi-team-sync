@@ -213,18 +213,21 @@ export function ProjectsTable({
             const completedTasks = project.metrics?.completedTasks || 0
             const totalTasks = project.metrics?.totalTasks || 0
             return (
-              <div key={project.id} className='relative'>
+              <div key={project.id} className='relative group'>
                 <ProjectCard
                   project={project}
                   onClick={() => navigateToProjectDetail(project.id)}
                 />
                 {isAdmin && (
-                  <div className='absolute bottom-4 right-4 z-10 mt-2'>
+                  <div className='absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
                     <Button
                       variant='ghost'
                       size='icon'
-                      className='h-8 w-8 text-red-500 hover:bg-red-100'
-                      onClick={() => handleRemoveProject(project)}
+                      className='h-8 w-8 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm'
+                      onClick={e => {
+                        e.stopPropagation()
+                        handleRemoveProject(project)
+                      }}
                       title='Remove from Team'
                     >
                       <Trash2 className='w-4 h-4' />

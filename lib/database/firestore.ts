@@ -291,8 +291,13 @@ export async function updateTask(taskId: string, taskData: Partial<Task>): Promi
  * Updates task status to "completed".
  * @param taskId The ID of the task.
  * @param employeeId The ID of the employee submitting the task.
+ * @param submissionDetails Optional object containing attachments and a comment.
  */
-export async function submitTaskForReview(taskId: string, employeeId: string): Promise<void> {
+export async function submitTaskForReview(
+  taskId: string,
+  employeeId: string,
+  submissionDetails?: { attachments?: any[]; employeeComment?: string }
+): Promise<void> {
   const taskRef = doc(db, 'tasks', taskId)
   const taskSnap = await getDoc(taskRef)
   if (!taskSnap.exists()) {
@@ -300,10 +305,17 @@ export async function submitTaskForReview(taskId: string, employeeId: string): P
   }
   const taskData = taskSnap.data() as Task
 
+  // Add validation to ensure employee is assigned
+  if (!taskData.assignedTo?.includes(employeeId)) {
+    throw new Error('You are not assigned to this task and cannot submit it for review.')
+  }
+
   await updateDoc(taskRef, {
     status: 'completed', // Status indicating ready for admin review
     updatedAt: serverTimestamp(),
     completedAt: serverTimestamp(), // Record completion time by employee
+    ...(submissionDetails?.attachments && { attachments: submissionDetails.attachments }),
+    ...(submissionDetails?.employeeComment && { employeeComment: submissionDetails.employeeComment }),
   })
 
   await addActivity({
@@ -312,7 +324,7 @@ export async function submitTaskForReview(taskId: string, employeeId: string): P
     action: ActivityActionType.TASK_SUBMITTED_FOR_REVIEW,
     targetId: taskId,
     targetName: taskData.name,
-    details: { projectId: taskData.projectId, submittedBy: employeeId },
+    details: { projectId: taskData.projectId, submittedBy: employeeId, comment: submissionDetails?.employeeComment },
   })
 }
 
@@ -462,12 +474,12 @@ export async function updateTaskStatusByEmployee(
  * Updates task status to "revision" and notifies assigned employee(s).
  * @param taskId The ID of the task.
  * @param adminId The ID of the admin requesting revision.
- * @param revisionNote Optional note for the revision.
+ * @param feedback Details for the revision including a comment and optional attachments.
  */
 export async function requestTaskRevision(
   taskId: string,
   adminId: string,
-  revisionNote?: string
+  feedback: { reviewComment: string; attachments?: any[] }
 ): Promise<void> {
   const taskRef = doc(db, 'tasks', taskId)
   const taskSnap = await getDoc(taskRef)
@@ -487,6 +499,8 @@ export async function requestTaskRevision(
   await updateDoc(taskRef, {
     status: 'revision',
     updatedAt: serverTimestamp(),
+    reviewComment: feedback.reviewComment, // Store feedback directly on the task
+    ...(feedback.attachments && { attachments: feedback.attachments }), // Optionally update attachments
   })
 
   if (taskData.assignedTo && taskData.assignedTo.length > 0) {
@@ -500,7 +514,7 @@ export async function requestTaskRevision(
         details: {
           projectId: taskData.projectId,
           requestedBy: adminId,
-          note: revisionNote || 'Revision requested by admin.',
+          note: feedback.reviewComment,
         },
       })
     }
@@ -515,7 +529,7 @@ export async function requestTaskRevision(
       details: {
         projectId: taskData.projectId,
         requestedBy: adminId,
-        note: revisionNote || 'Revision requested by admin.',
+        note: feedback.reviewComment,
         warning: 'No user was assigned to this task for direct notification.',
       },
     })
@@ -970,11 +984,15 @@ export async function checkOut(attendanceId: string, userId: string): Promise<vo
   // Create earning if duration is >= 8 hours
   if (hoursWorked >= 8) {
     try {
+      // Get user data to determine earning amount based on role
+      const userData = await getUserData(userId)
+      const earningAmount = userData?.role === 'admin' ? 200000 : 10000 // Admin: Rp 200,000, Employee: Rp 10,000
+
       await createEarning({
         userId: userId,
         type: 'attendance',
         refId: attendanceId,
-        amount: 10000, // Fixed amount as per spec
+        amount: earningAmount,
       })
       // createEarning already logs its own activity (EARNING_CREATED)
     } catch (error) {
@@ -1059,23 +1077,52 @@ export async function getTeamProjects(teamId: string): Promise<Project[]> {
       ...doc.data(),
     })) as Project[]
 
-    // Calculate metrics for each project
+    // Calculate metrics and fetch team details for each project
     const projectsWithMetrics = await Promise.all(
       projects.map(async project => {
+        // Fetch tasks for metrics
         const tasks = await getTasks(undefined, project.id)
-        const completedTasks = tasks.filter(task => task.status === 'completed').length
+        const completedTasks = tasks.filter(
+          task => task.status === 'completed' || task.status === 'done'
+        ).length
         const totalTasks = tasks.length
         const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
+        // Fetch assigned teams with member details for avatars
+        const assignedTeams: any[] = []
+        if (project.teams && project.teams.length > 0) {
+          for (const teamIdInProject of project.teams) {
+            try {
+              const team = await getTeamById(teamIdInProject)
+              if (team) {
+                // Fetch member details for team avatars (first 3 members)
+                const memberDetails = await Promise.all(
+                  team.members.slice(0, 3).map(async (member: any) => {
+                    const userData = await getUserData(member.userId)
+                    return userData
+                  })
+                )
+                assignedTeams.push({
+                  ...team,
+                  memberDetails: memberDetails.filter(detail => detail !== null),
+                })
+              }
+            } catch (error) {
+              console.error(`Error fetching team ${teamIdInProject}:`, error)
+            }
+          }
+        }
+
         return {
           ...project,
+          assignedTeams,
           metrics: {
             totalTasks,
             completedTasks,
             completionRate,
             pendingTasks: totalTasks - completedTasks,
-            totalTeams: 0,
-            activeMilestones: 0,
+            totalTeams: assignedTeams.length,
+            activeMilestones: project.milestones?.length || 0,
           },
         }
       })
@@ -1883,6 +1930,58 @@ export async function deleteUserRecord(userId: string): Promise<void> {
   } catch (error) {
     console.error('Error deleting user record from Firestore:', error)
     throw error
+  }
+}
+
+/**
+ * Calculates total earnings for a user from both task completion and attendance
+ * @param userId - The user ID to calculate earnings for
+ * @returns Promise resolving to earnings breakdown object
+ */
+export async function calculateUserEarnings(userId: string): Promise<{
+  taskEarnings: number
+  attendanceEarnings: number
+  totalEarnings: number
+  taskCount: number
+  attendanceCount: number
+}> {
+  try {
+    // Get all earnings for the user
+    const earningsQuery = query(collection(db, 'earnings'), where('userId', '==', userId))
+    const earningsSnapshot = await getDocs(earningsQuery)
+    const earnings = earningsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Earning[]
+
+    // Separate task and attendance earnings
+    const taskEarnings = earnings
+      .filter(earning => earning.type === 'task')
+      .reduce((sum, earning) => sum + earning.amount, 0)
+
+    const attendanceEarnings = earnings
+      .filter(earning => earning.type === 'attendance')
+      .reduce((sum, earning) => sum + earning.amount, 0)
+
+    const taskCount = earnings.filter(earning => earning.type === 'task').length
+    const attendanceCount = earnings.filter(earning => earning.type === 'attendance').length
+
+    return {
+      taskEarnings,
+      attendanceEarnings,
+      totalEarnings: taskEarnings + attendanceEarnings,
+      taskCount,
+      attendanceCount,
+    }
+  } catch (error) {
+    console.error('Error calculating user earnings:', error)
+    return {
+      taskEarnings: 0,
+      attendanceEarnings: 0,
+      totalEarnings: 0,
+      taskCount: 0,
+      attendanceCount: 0,
+    }
   }
 }
 

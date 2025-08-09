@@ -1,15 +1,15 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
-import { Input } from '@/components/atomics/input'
-import { useAuth } from '@/components/auth-provider'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/molecules/dropdown-menu'
+} from '@/components/atomics/dropdown-menu'
+import { Input } from '@/components/atomics/input'
+import { useAuth } from '@/components/auth-provider'
 import { NotificationPanel } from '@/components/organisms/NotificationPanel'
 import { useSidebar } from '@/hooks'
 import { auth } from '@/lib/firebase'

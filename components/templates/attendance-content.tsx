@@ -187,13 +187,17 @@ export function AttendanceContent() {
     )
   }
 
-  const employeeAttendanceSection = userRole !== 'admin' && (
+  const attendanceSection = (
     <Card className='mb-6'>
       <CardHeader>
         <CardTitle className='flex items-center'>
           <Clock className='mr-2 h-6 w-6' /> Today's Attendance
         </CardTitle>
-        <CardDescription>Clock-in and clock-out according to schedule.</CardDescription>
+        <CardDescription>
+          {userRole === 'admin'
+            ? 'Admin attendance tracking - Clock-in and clock-out according to schedule.'
+            : 'Clock-in and clock-out according to schedule.'}
+        </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         {error && (
@@ -240,7 +244,7 @@ export function AttendanceContent() {
     <div className='space-y-6 p-4 md:p-6'>
       <h1 className='text-3xl font-bold tracking-tight'>Attendance</h1>
 
-      {employeeAttendanceSection}
+      {attendanceSection}
 
       <Tabs defaultValue='my_records' className='space-y-4'>
         <TabsList>

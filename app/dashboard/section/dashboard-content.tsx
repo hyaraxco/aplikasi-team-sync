@@ -1,9 +1,8 @@
 'use client'
 
-import { ActivityFeed } from '@/app/dashboard/section/activity-feed'
 import { Skeleton } from '@/components/atomics/skeleton'
 import { useAuth } from '@/components/auth-provider'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
+import { Card, CardContent } from '@/components/molecules/card'
 import {
   formatRupiah,
   getAttendanceRecords,
@@ -15,6 +14,18 @@ import {
 } from '@/lib/helpers'
 import { Briefcase, CheckSquare, Clock, DollarSign } from 'lucide-react'
 import { useEffect, useState } from 'react'
+
+// Import all dashboard widgets using standard pattern
+import {
+  AllTasksOverviewWidget,
+  AttendanceWidget,
+  MyTasksWidget,
+  ProjectActivityWidget,
+  QuickActionsWidget,
+  RecentActivityWidget,
+  SystemAnalyticsWidget,
+  TeamManagementWidget,
+} from '@/components/widgets'
 
 export function DashboardContent() {
   const { user, userRole } = useAuth()
@@ -93,13 +104,6 @@ export function DashboardContent() {
     fetchData()
   }, [user, userRole])
 
-  // Calculate dashboard metrics
-  const activeProjects = projects.filter(p => p.status === 'in-progress').length
-  const pendingTasks = tasks.filter(
-    t => t.status === 'backlog' || t.status === 'in_progress'
-  ).length
-  const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'done').length
-
   return (
     <div className='space-y-6'>
       <div>
@@ -115,91 +119,117 @@ export function DashboardContent() {
         </div>
       )}
 
-      {/* Overview dashboard */}
-      <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Active Projects</CardTitle>
-            <Briefcase className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className='h-8 w-24' />
-            ) : (
-              <>
-                <div className='text-2xl font-bold'>{activeProjects}</div>
-                <p className='text-xs text-muted-foreground'>
-                  {activeProjects > 0
-                    ? `${activeProjects} active project${activeProjects !== 1 ? 's' : ''}`
-                    : 'No active projects'}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Pending Tasks</CardTitle>
-            <Clock className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className='h-8 w-24' />
-            ) : (
-              <>
-                <div className='text-2xl font-bold'>{pendingTasks}</div>
-                <p className='text-xs text-muted-foreground'>
-                  {pendingTasks > 0
-                    ? `${pendingTasks} pending task${pendingTasks !== 1 ? 's' : ''}`
-                    : 'No pending tasks'}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Completed Tasks</CardTitle>
-            <CheckSquare className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className='h-8 w-24' />
-            ) : (
-              <>
-                <div className='text-2xl font-bold'>{completedTasks}</div>
-                <p className='text-xs text-muted-foreground'>
-                  {completedTasks > 0
-                    ? `${completedTasks} completed task${completedTasks !== 1 ? 's' : ''}`
-                    : 'No completed tasks'}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-            <CardTitle className='text-sm font-medium'>Total Earnings</CardTitle>
-            <DollarSign className='h-4 w-4 text-muted-foreground' />
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className='h-8 w-24' />
-            ) : (
-              <>
-                <div className='text-2xl font-bold'>{formatRupiah(totalEarnings)}</div>
-                <p className='text-xs text-muted-foreground'>
-                  {userRole === 'admin'
-                    ? 'Team total earnings'
-                    : 'From completed tasks and attendance'}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Team Sync Dashboard Layout - Improved and decluttered */}
+      {userRole === 'employee' ? (
+        // Revamped Employee Dashboard Layout
+        <div className='space-y-6'>
+          {/* Row 1: Key Widgets */}
+          <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
+            <AttendanceWidget />
+            <MyTasksWidget />
+          </div>
 
-      <ActivityFeed />
+          {/* Row 2: Secondary Widgets */}
+          <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
+            <ProjectActivityWidget />
+            <QuickActionsWidget />
+          </div>
+
+          {/* Row 3: Activity Feed */}
+          <div>
+            <RecentActivityWidget />
+          </div>
+        </div>
+      ) : (
+        // Admin Dashboard Layout
+        <div className='space-y-6'>
+          {/* Top Row: Admin Summary Cards (4 metrics) */}
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            <Card className='bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-900/50 border-blue-200 dark:border-blue-800'>
+              <CardContent className='p-6'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <p className='text-sm font-medium text-blue-600 dark:text-blue-400'>
+                      Active Today
+                    </p>
+                    <div className='text-2xl font-bold text-blue-700 dark:text-blue-300'>
+                      {loading ? <Skeleton className='h-8 w-16' /> : '12'}
+                    </div>
+                  </div>
+                  <Clock className='h-8 w-8 text-blue-500 dark:text-blue-400' />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className='bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/50 border-green-200 dark:border-green-800'>
+              <CardContent className='p-6'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <p className='text-sm font-medium text-green-600 dark:text-green-400'>
+                      Projects
+                    </p>
+                    <div className='text-2xl font-bold text-green-700 dark:text-green-300'>
+                      {loading ? <Skeleton className='h-8 w-16' /> : projects.length}
+                    </div>
+                  </div>
+                  <Briefcase className='h-8 w-8 text-green-500 dark:text-green-400' />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className='bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-900/50 border-purple-200 dark:border-purple-800'>
+              <CardContent className='p-6'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <p className='text-sm font-medium text-purple-600 dark:text-purple-400'>
+                      Total Tasks
+                    </p>
+                    <div className='text-2xl font-bold text-purple-700 dark:text-purple-300'>
+                      {loading ? <Skeleton className='h-8 w-16' /> : tasks.length}
+                    </div>
+                  </div>
+                  <CheckSquare className='h-8 w-8 text-purple-500 dark:text-purple-400' />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className='bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-900/50 border-orange-200 dark:border-orange-800'>
+              <CardContent className='p-6'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <p className='text-sm font-medium text-orange-600 dark:text-orange-400'>
+                      Total Earnings
+                    </p>
+                    <div className='text-xl font-bold text-orange-700 dark:text-orange-300'>
+                      {loading ? <Skeleton className='h-6 w-20' /> : formatRupiah(totalEarnings)}
+                    </div>
+                  </div>
+                  <DollarSign className='h-8 w-8 text-orange-500 dark:text-orange-400' />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Second Row: Project Activity + Attendance */}
+          <div className='grid gap-6 md:grid-cols-2'>
+            <ProjectActivityWidget />
+            <AttendanceWidget />
+          </div>
+
+          {/* Third Row: Quick Actions + Team Management + All Tasks Overview */}
+          <div className='grid gap-6 md:grid-cols-3'>
+            <QuickActionsWidget />
+            <TeamManagementWidget />
+            <AllTasksOverviewWidget />
+          </div>
+
+          {/* Fourth Row: System Analytics + Recent Activity */}
+          <div className='grid gap-6 md:grid-cols-2'>
+            <SystemAnalyticsWidget />
+            <RecentActivityWidget />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

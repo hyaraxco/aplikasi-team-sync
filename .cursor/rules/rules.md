@@ -66,8 +66,8 @@ management, UI components, and data fetching.
 
 # Important Scripts
 
-- `dev`: Starts the development server.
-- `build`: Builds the application for production.
+- `yarn dev`: Starts the development server.
+- `yarn build`: Builds the application for production.
 
 # AI Interaction Guidelines
 
@@ -87,18 +87,7 @@ management, UI components, and data fetching.
 - Ensure that the generated code is compatible with the existing codebase.
 - Ensure that every page with list or display data has a loading state with
   skeleton loading and empty state.
-- **Language Compliance**: Always use English for all user-facing text, error
-  messages, labels, and comments. Never use Indonesian or any other language.
-- **Text Consistency**: Follow existing English text patterns and maintain
-  professional, clear messaging throughout the application.
-- **Currency Compliance**: Always use Indonesian Rupiah (IDR) formatting for all
-  monetary values using `formatRupiah()` function.
-- **Date Picker Compliance**: Always use `@/components/molecules/AntDatePicker`
-  components for any date selection functionality.
-- **Component Consistency**: Use existing standardized components and follow
-  established patterns for currency and date handling.
-- **Code Consistency**: Maintain consistent code style and formatting across the
-  feature.
+- Ensure that the generated code is compatible with the existing codebase.
 
 # Team Sync of Terms and Concepts
 

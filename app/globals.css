@@ -18,6 +18,31 @@ body {
   .content-with-sidebar {
     margin-left: 16rem; /* 64px */
   }
+
+  /* VS Code inspired utilities */
+  .vscode-panel {
+    @apply bg-card border border-border rounded-lg;
+  }
+
+  .vscode-input {
+    @apply bg-input border border-border rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+
+  .vscode-button {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium transition-colors;
+  }
+
+  .vscode-button-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border px-4 py-2 rounded-md font-medium transition-colors;
+  }
+
+  .vscode-sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors;
+  }
+
+  .vscode-sidebar-item-active {
+    @apply bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-sidebar-primary;
+  }
 }
 
 @layer base {
@@ -57,38 +82,60 @@ body {
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* VS Code inspired dark theme */
+    /* Main backgrounds - VS Code uses #1e1e1e as primary */
+    --background: 220 13% 11%; /* #1e1e1e equivalent */
+    --foreground: 0 0% 88%; /* #e1e1e1 - soft white */
+
+    /* Card and elevated surfaces */
+    --card: 220 13% 14%; /* #252526 - slightly lighter than bg */
+    --card-foreground: 0 0% 88%; /* #e1e1e1 */
+
+    /* Popover and dropdown */
+    --popover: 220 13% 16%; /* #2d2d30 - elevated surface */
+    --popover-foreground: 0 0% 88%; /* #e1e1e1 */
+
+    /* Primary colors - keeping purple theme */
+    --primary: 258 90% 66%; /* #a855f7 - purple-500 */
+    --primary-foreground: 0 0% 100%; /* white */
+
+    /* Secondary surfaces */
+    --secondary: 220 13% 18%; /* #37373d - input backgrounds */
+    --secondary-foreground: 0 0% 88%; /* #e1e1e1 */
+
+    /* Muted elements */
+    --muted: 220 13% 16%; /* #2d2d30 - muted backgrounds */
+    --muted-foreground: 0 0% 64%; /* #a3a3a3 - muted text */
+
+    /* Accent colors */
+    --accent: 220 13% 18%; /* #37373d - hover states */
+    --accent-foreground: 0 0% 88%; /* #e1e1e1 */
+
+    /* Destructive/Error colors */
+    --destructive: 0 84% 60%; /* #f87171 - red-400 */
+    --destructive-foreground: 0 0% 98%; /* white */
+
+    /* Borders and inputs */
+    --border: 220 13% 20%; /* #3e3e42 - subtle borders */
+    --input: 220 13% 18%; /* #37373d - input backgrounds */
+    --ring: 258 90% 66%; /* #a855f7 - focus rings */
+
+    /* Chart colors - VS Code inspired */
+    --chart-1: 210 100% 70%; /* Blue */
+    --chart-2: 142 76% 60%; /* Green */
+    --chart-3: 45 100% 70%; /* Yellow */
+    --chart-4: 258 90% 66%; /* Purple */
+    --chart-5: 0 84% 60%; /* Red */
+
+    /* Sidebar - VS Code activity bar style */
+    --sidebar-background: 220 13% 9%; /* #1a1a1a - darker than main bg */
+    --sidebar-foreground: 0 0% 88%; /* #e1e1e1 */
+    --sidebar-primary: 258 90% 66%; /* #a855f7 - purple accent */
+    --sidebar-primary-foreground: 0 0% 100%; /* white */
+    --sidebar-accent: 220 13% 16%; /* #2d2d30 - hover states */
+    --sidebar-accent-foreground: 0 0% 88%; /* #e1e1e1 */
+    --sidebar-border: 220 13% 20%; /* #3e3e42 - subtle borders */
+    --sidebar-ring: 258 90% 66%; /* #a855f7 - focus rings */
   }
 }
 
@@ -98,5 +145,28 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Ensure smooth transitions for theme changes */
+  * {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Override transition for specific elements that shouldn't animate */
+  .no-transition,
+  .no-transition * {
+    transition: none !important;
+  }
+
+  /* Ensure proper contrast in dark mode */
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* Light mode */
+  .light {
+    color-scheme: light;
   }
 }

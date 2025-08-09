@@ -56,7 +56,7 @@ export { SidebarProvider, useSidebar } from './ui/use-sidebar'
 export { toast, useToast } from './ui/use-toast'
 
 // Data hooks
-export { useEarnings } from './data/use-earnings'
+export { useEarnings, useProcessedEarnings, useSingleUserEarnings } from './data/use-earnings'
 
 // Auth hooks
 export { usePermission } from './auth/use-permission'

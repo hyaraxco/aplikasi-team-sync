@@ -42,18 +42,23 @@ service cloud.firestore {
       allow update: if isAuthenticated() &&
         // Employee is assigned to this task
         request.auth.uid in resource.data.assignedTo &&
-        // Only allow updating specific fields
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'completedAt']) &&
-        // Only allow specific status transitions
+        // Only allow updating specific fields including attachments and comments
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'completedAt', 'attachments', 'employeeComment']) &&
+        // Only allow specific status transitions (if status is being changed)
         (
-          // From backlog to in_progress
-          (resource.data.status == 'backlog' && request.resource.data.status == 'in_progress') ||
-          // From in_progress to completed (for review)
-          (resource.data.status == 'in_progress' && request.resource.data.status == 'completed') ||
-          // From revision back to in_progress (resume after revision)
-          (resource.data.status == 'revision' && request.resource.data.status == 'in_progress') ||
-          // From rejected back to in_progress (resume after rejection)
-          (resource.data.status == 'rejected' && request.resource.data.status == 'in_progress')
+          // If status is not being changed, allow the update (for attachments/comments)
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
+          // Or allow specific status transitions
+          (
+            // From backlog to in_progress
+            (resource.data.status == 'backlog' && request.resource.data.status == 'in_progress') ||
+            // From in_progress to completed (for review)
+            (resource.data.status == 'in_progress' && request.resource.data.status == 'completed') ||
+            // From revision back to in_progress (resume after revision)
+            (resource.data.status == 'revision' && request.resource.data.status == 'in_progress') ||
+            // From rejected back to in_progress (resume after rejection)
+            (resource.data.status == 'rejected' && request.resource.data.status == 'in_progress')
+          )
         );
     }
 
@@ -101,5 +106,3 @@ service cloud.firestore {
     }
   }
 }
-
-

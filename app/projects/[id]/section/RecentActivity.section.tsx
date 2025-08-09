@@ -3,7 +3,8 @@
 import { Avatar, AvatarFallback, AvatarImage, ScrollArea } from '@/components/molecules'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import { EmptyState } from '@/components/molecules/data-display/EmptyState'
-import { formatActivityMessage, getUserData, resolveActorNameFromUserData } from '@/lib/database'
+import { getUserData, resolveActorNameFromUserData } from '@/lib/database'
+import { formatActivityMessageWithUsers } from '@/lib/database/activity'
 import type { Activity as BaseActivity, UserData } from '@/types'
 import { ActivityActionType } from '@/types/database'
 import { formatDistanceToNow } from 'date-fns'
@@ -73,12 +74,57 @@ export function ProjectRecentActivityCard({
                 // Use internal user data or fallback to prop-provided data
                 const user =
                   internalUsersData.get(activity.userId) || usersDataMap?.get(activity.userId)
-
-                const userName = resolveActorNameFromUserData(user, {
+                let targetUser: UserData | undefined = undefined
+                const details = activity.details || {}
+                if (
+                  details.requestedBy &&
+                  (internalUsersData.get(details.requestedBy) ||
+                    usersDataMap?.get(details.requestedBy))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.requestedBy) ||
+                    usersDataMap?.get(details.requestedBy)
+                } else if (
+                  details.assignedTo &&
+                  (internalUsersData.get(details.assignedTo) ||
+                    usersDataMap?.get(details.assignedTo))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.assignedTo) ||
+                    usersDataMap?.get(details.assignedTo)
+                } else if (
+                  details.approvedBy &&
+                  (internalUsersData.get(details.approvedBy) ||
+                    usersDataMap?.get(details.approvedBy))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.approvedBy) ||
+                    usersDataMap?.get(details.approvedBy)
+                } else if (
+                  details.userId &&
+                  (internalUsersData.get(details.userId) || usersDataMap?.get(details.userId))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.userId) || usersDataMap?.get(details.userId)
+                }
+                if (
+                  !targetUser &&
+                  Array.isArray(details.assignedTo) &&
+                  details.assignedTo.length > 0
+                ) {
+                  const firstAssignee = details.assignedTo[0]
+                  targetUser =
+                    internalUsersData.get(firstAssignee) || usersDataMap?.get(firstAssignee)
+                }
+                const userName = user
+                  ? resolveActorNameFromUserData(user, {
+                      includeRole: true,
+                      showUserIdInFallback: true,
+                    })
+                  : 'Unknown User'
+                const displayMessage = formatActivityMessageWithUsers(activity, user, targetUser, {
                   includeRole: true,
-                  showUserIdInFallback: true,
                 })
-
                 const userInitials = user?.displayName
                   ? user.displayName.substring(0, 2).toUpperCase()
                   : 'U'
@@ -88,9 +134,6 @@ export function ProjectRecentActivityCard({
                   'seconds' in activity.timestamp
                     ? new Date(activity.timestamp.seconds * 1000)
                     : new Date() // Fallback to now if timestamp is problematic
-
-                const displayMessage = formatActivityMessage(activity, userName)
-
                 return (
                   <li key={activity.id} className='flex items-start gap-3'>
                     <Avatar className='h-8 w-8 border'>

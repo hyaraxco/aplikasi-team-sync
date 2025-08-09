@@ -1,9 +1,6 @@
 'use client'
 
 import { Badge } from '@/components/atomics/badge'
-import { Button } from '@/components/atomics/button'
-import { Textarea } from '@/components/atomics/textarea'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules/avatar'
 import { Separator } from '@/components/molecules/separator'
 import {
   Sheet,
@@ -12,16 +9,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/molecules/sheet'
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules/tabs'
 import { useToast } from '@/hooks'
-import { db } from '@/lib/firebase'
-import { StorageServiceFactory, downloadFile } from '@/lib/storage-service'
-import { getTaskPriorityBadgeConfig } from '@/lib/ui'
-import { TaskPriority } from '@/types'
+import { auth, db } from '@/lib/firebase'
+import { downloadFile, StorageServiceFactory } from '@/lib/storage-service'
+import { getTaskPriorityBadgeConfig, getTaskStatusBadgeConfig } from '@/lib/ui'
+import { TaskAttachment, TaskPriority, TaskStatus } from '@/types'
 import { format } from 'date-fns'
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore'
-import { Calendar, CheckCircle, Download, FileText, Paperclip, Upload, XCircle } from 'lucide-react'
-import { useState } from 'react'
+import { doc, serverTimestamp, Timestamp, updateDoc } from 'firebase/firestore'
+import { Calendar, Paperclip, Send, User } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { TaskActionsTab } from '../components/TaskActionsTab'
+import { TaskFilesTab } from '../components/TaskFilesTab'
+import { TaskOverviewTab } from '../components/TaskOverviewTab'
 import type { TaskCardProps } from './TaskCard.section'
 
 interface SidebarDetailTasksProps {
@@ -29,7 +30,6 @@ interface SidebarDetailTasksProps {
   isOpen: boolean
   userRole: 'admin' | 'employee' | null
   onOpenChange: (isOpen: boolean) => void
-  onUpdateTask: (status: 'done' | 'revision', comment?: string) => Promise<void>
   onDataRefresh?: () => Promise<void>
 }
 
@@ -38,204 +38,80 @@ export function SidebarDetailTasks({
   isOpen,
   userRole,
   onOpenChange,
-  onUpdateTask,
   onDataRefresh,
 }: SidebarDetailTasksProps) {
-  const [revisionComment, setRevisionComment] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [dragActive, setDragActive] = useState(false)
-  const [uploadType, setUploadType] = useState<'context' | 'result' | 'feedback' | null>(null)
   const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
+
+  // States for file management
+  const [resultFiles, setResultFiles] = useState<File[]>([])
+  const [feedbackFiles, setFeedbackFiles] = useState<File[]>([])
+  const [contextFiles, setContextFiles] = useState<File[]>([])
+  const [reviewComment, setReviewComment] = useState('')
+  const [employeeComment, setEmployeeComment] = useState('')
+
+  // Track the current task ID to detect task changes
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null)
+
+  // Ref to access the uncontrolled textarea value when needed
+  const employeeCommentRef = useRef<string>('')
+
+  // Stable onChange handlers to prevent re-renders
+  const handleEmployeeCommentChange = useCallback((value: string) => {
+    employeeCommentRef.current = value // Store in ref for submission
+    setEmployeeComment(value) // Keep state for reset logic
+  }, [])
+
+  const handleReviewCommentChange = useCallback((value: string) => {
+    setReviewComment(value)
+  }, [])
+
+  // Reset state only when switching to a different task
+  useEffect(() => {
+    if (isOpen && task && task.id !== currentTaskId) {
+      // Only reset when opening dialog for a different task
+      setResultFiles([])
+      setFeedbackFiles([])
+      setContextFiles([])
+      setReviewComment('')
+      setEmployeeComment('')
+      employeeCommentRef.current = '' // Reset ref as well
+      setActiveTab('overview')
+      setCurrentTaskId(task.id)
+    }
+  }, [isOpen, task?.id, currentTaskId])
+
+  // Reset when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setResultFiles([])
+      setFeedbackFiles([])
+      setContextFiles([])
+      setReviewComment('')
+      setEmployeeComment('')
+      employeeCommentRef.current = '' // Reset ref when dialog closes
+      setCurrentTaskId(null)
+    }
+  }, [isOpen])
 
   if (!task) return null
 
-  // Admin cannot view tasks that are in progress (being worked on by employee)
-  if (userRole === 'admin' && task.status === 'in_progress') {
-    return (
-      <Sheet open={isOpen} onOpenChange={onOpenChange}>
-        <SheetContent className='w-[400px] sm:w-[540px]'>
-          <SheetHeader>
-            <SheetTitle>Task In Progress</SheetTitle>
-            <SheetDescription>
-              This task is currently being worked on by an employee. Please wait until it's
-              completed for review.
-            </SheetDescription>
-          </SheetHeader>
-          <div className='flex items-center justify-center h-[200px]'>
-            <div className='text-center space-y-2'>
-              <div className='text-4xl'>⏳</div>
-              <p className='text-sm text-muted-foreground'>Task is being worked on...</p>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
-    )
-  }
+  // Business logic helpers
+  const canEmployeeSubmit =
+    userRole === 'employee' && (task.status === 'in_progress' || task.status === 'revision')
 
-  const handleApprove = async () => {
-    setIsSubmitting(true)
+  const canAdminReview = userRole === 'admin' && task.status === 'completed'
+
+  // Show feedback section for rejected/revision tasks even without files (to show comments)
+  const shouldShowFeedback =
+    task.status === 'revision' ||
+    task.status === 'rejected' ||
+    (task.attachments?.filter(a => a.attachmentType === 'feedback').length || 0) > 0
+
+  const handleFileDownload = async (attachment: TaskAttachment) => {
     try {
-      await onUpdateTask('done')
-      // Refresh data to ensure UI reflects the latest state
-      if (onDataRefresh) {
-        await onDataRefresh()
-      }
-    } finally {
-      setIsSubmitting(false)
-      onOpenChange(false)
-    }
-  }
-
-  const handleRequestRevision = async () => {
-    if (!revisionComment.trim()) {
-      toast({
-        title: 'Revision comment required',
-        description: 'Please add a comment explaining what needs to be revised.',
-        variant: 'destructive',
-      })
-      return
-    }
-    setIsSubmitting(true)
-    try {
-      await onUpdateTask('revision', revisionComment)
-      // Refresh data to ensure UI reflects the latest state
-      if (onDataRefresh) {
-        await onDataRefresh()
-      }
-      setRevisionComment('') // Clear the comment after successful submission
-    } finally {
-      setIsSubmitting(false)
-      onOpenChange(false)
-    }
-  }
-
-  const uploadFile = async (file: File, attachmentType: 'context' | 'result' | 'feedback') => {
-    if (!task) return
-
-    setIsUploading(true)
-    try {
-      // Get Cloudinary storage service
-      const storageService = StorageServiceFactory.getPreferredService()
-
-      // Upload file using storage service
-      const uploadResult = await storageService.upload(file, `tasks/${task.id}`, attachmentType)
-
-      // Import arrayUnion for Firestore update
-      const { arrayUnion } = await import('firebase/firestore')
-
-      // Create attachment object
-      const attachment = {
-        id: Date.now().toString(),
-        fileName: file.name,
-        fileUrl: uploadResult.url,
-        secureUrl: uploadResult.secureUrl,
-        publicId: uploadResult.publicId,
-        fileSize: uploadResult.fileSize,
-        fileType: file.type,
-        uploadedBy: 'current-user', // You can get this from auth context
-        uploadedByRole: userRole || 'employee',
-        uploadedAt: new Date(),
-        attachmentType: attachmentType,
-        storageProvider: uploadResult.storageProvider,
-      }
-
-      // Update task with new attachment
-      await updateDoc(doc(db, 'tasks', task.id), {
-        attachments: arrayUnion(attachment),
-        updatedAt: serverTimestamp(),
-      })
-
-      const typeLabels = {
-        context: 'Context file',
-        result: 'Result file',
-        feedback: 'Feedback file',
-      }
-
-      toast({
-        title: 'File Uploaded',
-        description: `${typeLabels[attachmentType]} "${file.name}" has been uploaded successfully to Cloudinary.`,
-      })
-
-      // Refresh data to show new attachment
-      if (onDataRefresh) {
-        await onDataRefresh()
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error)
-      toast({
-        title: 'Upload Failed',
-        description: `Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      })
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  const handleContextFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    await uploadFile(file, 'context')
-    event.target.value = ''
-  }
-
-  const handleResultFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    await uploadFile(file, 'result')
-    event.target.value = ''
-  }
-
-  const handleFeedbackFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    await uploadFile(file, 'feedback')
-    event.target.value = ''
-  }
-
-  // Drag and Drop handlers
-  const handleDragEnter = (e: React.DragEvent, type: 'context' | 'result' | 'feedback') => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(true)
-    setUploadType(type)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    setUploadType(null)
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    const files = e.dataTransfer.files
-    if (files && files.length > 0 && uploadType) {
-      await uploadFile(files[0], uploadType)
-    }
-    setUploadType(null)
-  }
-
-  const handleFileDownload = async (attachment: any) => {
-    try {
-      const success = await downloadFile(attachment)
-      if (!success) {
-        toast({
-          title: 'Download Failed',
-          description: 'Unable to download file. Please try again.',
-          variant: 'destructive',
-        })
-      }
+      await downloadFile(attachment)
     } catch (error) {
       console.error('Download error:', error)
       toast({
@@ -246,9 +122,238 @@ export function SidebarDetailTasks({
     }
   }
 
-  const getPriorityBadgeConfig = (priority: string | undefined) => {
-    return getTaskPriorityBadgeConfig(priority as TaskPriority)
+  // Handle file deletion with role-based permissions
+  const handleFileDelete = async (attachment: TaskAttachment) => {
+    if (!task || !auth.currentUser) return
+
+    // Role-based deletion permissions
+    const canDelete =
+      // Admin can delete their own files, but NOT on approved tasks
+      (userRole === 'admin' && attachment.uploadedByRole === 'admin' && task.status !== 'done') ||
+      // Employee can delete result files only during work (not after approval)
+      (userRole === 'employee' &&
+        attachment.uploadedByRole === 'employee' &&
+        attachment.attachmentType === 'result' &&
+        (task.status === 'in_progress' ||
+          task.status === 'revision' ||
+          task.status === 'rejected')) ||
+      // Special case: Admin can delete feedback files on rejected tasks (for re-review)
+      (userRole === 'admin' &&
+        attachment.uploadedByRole === 'admin' &&
+        attachment.attachmentType === 'feedback' &&
+        (task.status === 'revision' || task.status === 'rejected'))
+
+    if (!canDelete) {
+      toast({
+        title: 'Permission Denied',
+        description: 'You cannot delete this file.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${attachment.fileName}"? This action cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setIsSubmitting(true)
+    try {
+      // Delete from Cloudinary storage
+      const storageService = StorageServiceFactory.getService()
+      const deleteSuccess = await storageService.delete(attachment)
+
+      if (!deleteSuccess) {
+        throw new Error('Failed to delete file from storage')
+      }
+
+      // Remove from Firestore
+      const updatedAttachments = (task.attachments || []).filter(att => att.id !== attachment.id)
+
+      await updateDoc(doc(db, 'tasks', task.id), {
+        attachments: updatedAttachments,
+        updatedAt: serverTimestamp(),
+      })
+
+      toast({
+        title: 'File Deleted',
+        description: `${attachment.fileName} has been deleted successfully.`,
+      })
+
+      onDataRefresh?.()
+    } catch (error) {
+      console.error('Error deleting file:', error)
+      toast({
+        title: 'Deletion Failed',
+        description: 'Could not delete the file. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
+
+  // Employee action to submit work
+  const handleEmployeeSubmit = async () => {
+    if (!task) return
+    setIsSubmitting(true)
+    try {
+      const storageService = StorageServiceFactory.getService()
+      const uploadedAttachments: TaskAttachment[] = task.attachments ? [...task.attachments] : []
+
+      for (const file of resultFiles) {
+        const result = await storageService.upload(file, `tasks/${task.id}`, 'result')
+        uploadedAttachments.push({
+          id: result.publicId,
+          publicId: result.publicId,
+          fileName: file.name,
+          fileUrl: result.url,
+          secureUrl: result.secureUrl,
+          fileSize: result.fileSize,
+          fileType: file.type,
+          uploadedBy: auth.currentUser?.uid || 'unknown',
+          uploadedByRole: 'employee',
+          uploadedAt: Timestamp.now(),
+          attachmentType: 'result',
+          storageProvider: 'cloudinary',
+        })
+      }
+
+      await updateDoc(doc(db, 'tasks', task.id), {
+        status: 'completed', // 'completed' is the "Submitted" status
+        attachments: uploadedAttachments,
+        updatedAt: serverTimestamp(),
+        ...(employeeCommentRef.current.trim() && {
+          employeeComment: employeeCommentRef.current.trim(),
+        }),
+      })
+
+      toast({ title: 'Task Submitted', description: 'Your work has been submitted for review.' })
+      onDataRefresh?.()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error submitting task:', error)
+      toast({
+        title: 'Submission Failed',
+        description: 'Could not submit your work.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Handle admin context file upload
+  const handleContextFileUpload = async () => {
+    if (!task || contextFiles.length === 0) return
+
+    setIsSubmitting(true)
+    try {
+      const storageService = StorageServiceFactory.getService()
+      const uploadedAttachments: TaskAttachment[] = task.attachments ? [...task.attachments] : []
+
+      for (const file of contextFiles) {
+        const result = await storageService.upload(file, `tasks/${task.id}`, 'context')
+        uploadedAttachments.push({
+          id: result.publicId,
+          publicId: result.publicId,
+          fileName: file.name,
+          fileUrl: result.url,
+          secureUrl: result.secureUrl,
+          fileSize: result.fileSize,
+          fileType: file.type,
+          uploadedBy: auth.currentUser?.uid || 'unknown',
+          uploadedByRole: 'admin',
+          uploadedAt: Timestamp.now(),
+          attachmentType: 'context',
+          storageProvider: 'cloudinary',
+        })
+      }
+
+      await updateDoc(doc(db, 'tasks', task.id), {
+        attachments: uploadedAttachments,
+        updatedAt: serverTimestamp(),
+      })
+
+      toast({
+        title: 'Context Files Uploaded',
+        description: 'Reference materials have been added to the task.',
+      })
+      setContextFiles([])
+
+      // Update the task object directly to reflect new attachments
+      // This prevents navigation and ensures immediate UI update
+      if (task) {
+        task.attachments = uploadedAttachments
+      }
+
+      // Optional: Call onDataRefresh without await to prevent navigation
+      onDataRefresh?.().catch(console.error)
+    } catch (error) {
+      console.error('Error uploading context files:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to upload context files. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Admin action to save review
+  const handleAdminReview = async (status: 'done' | 'revision') => {
+    if (!task) return
+    setIsSubmitting(true)
+    try {
+      const storageService = StorageServiceFactory.getService()
+      const finalAttachments: TaskAttachment[] = task.attachments ? [...task.attachments] : []
+
+      if (feedbackFiles.length > 0) {
+        for (const file of feedbackFiles) {
+          const result = await storageService.upload(file, `tasks/${task.id}`, 'feedback')
+          finalAttachments.push({
+            id: result.publicId,
+            publicId: result.publicId,
+            fileName: file.name,
+            fileUrl: result.url,
+            secureUrl: result.secureUrl,
+            fileSize: result.fileSize,
+            fileType: file.type,
+            uploadedBy: auth.currentUser?.uid || 'unknown',
+            uploadedByRole: 'admin',
+            uploadedAt: Timestamp.now(),
+            attachmentType: 'feedback',
+            storageProvider: 'cloudinary',
+          })
+        }
+      }
+
+      await updateDoc(doc(db, 'tasks', task.id), {
+        status: status,
+        attachments: finalAttachments,
+        updatedAt: serverTimestamp(),
+        ...(status === 'revision' && { reviewComment: reviewComment }),
+      })
+
+      toast({ title: 'Review Saved', description: `Task has been marked as ${status}.` })
+      onDataRefresh?.()
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error saving review:', error)
+      toast({
+        title: 'Review Failed',
+        description: 'Could not save the review.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const priorityBadge = getTaskPriorityBadgeConfig(task.priority as TaskPriority)
+  const statusBadge = getTaskStatusBadgeConfig(task.status as TaskStatus, userRole || 'employee')
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -257,28 +362,15 @@ export function SidebarDetailTasks({
           <div className='flex justify-between items-start gap-2'>
             <SheetTitle className='text-lg flex-1'>{task.name}</SheetTitle>
             <div className='flex gap-2'>
-              {(() => {
-                const priorityBadge = getPriorityBadgeConfig(task.priority)
-                return <span className={priorityBadge.className}>{priorityBadge.text}</span>
-              })()}
-              {(() => {
-                // Import the utility function inline
-                const { getTaskStatusBadgeConfig } = require('@/lib/ui')
-                const badgeConfig = getTaskStatusBadgeConfig(
-                  task.status as any,
-                  userRole || 'employee'
-                )
-                return (
-                  <Badge
-                    className={badgeConfig.className.replace(
-                      'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium',
-                      ''
-                    )}
-                  >
-                    {badgeConfig.text}
-                  </Badge>
-                )
-              })()}
+              <span className={priorityBadge.className}>{priorityBadge.text}</span>
+              <Badge
+                className={statusBadge.className.replace(
+                  'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium',
+                  ''
+                )}
+              >
+                {statusBadge.text}
+              </Badge>
             </div>
           </div>
           <SheetDescription className='flex items-center gap-2 text-xs'>
@@ -289,334 +381,64 @@ export function SidebarDetailTasks({
 
         <Separator />
 
-        <div className='mt-6 space-y-6'>
-          <div className='space-y-2'>
-            <h3 className='text-sm font-medium text-muted-foreground'>Assigned To</h3>
-            <div className='flex items-center gap-2'>
-              <Avatar className='h-8 w-8'>
-                <AvatarImage src={task.assignee?.avatar} />
-                <AvatarFallback>{task.assignee?.initials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className='font-medium text-sm'>{task.assignee?.name}</p>
-              </div>
-            </div>
-          </div>
+        {/* Unified Tabbed Interface */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full mt-4'>
+          <TabsList className='grid w-full grid-cols-3'>
+            <TabsTrigger value='overview' className='flex items-center gap-2'>
+              <User className='h-4 w-4' />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value='files' className='flex items-center gap-2'>
+              <Paperclip className='h-4 w-4' />
+              Files
+            </TabsTrigger>
+            <TabsTrigger value='actions' className='flex items-center gap-2'>
+              <Send className='h-4 w-4' />
+              Actions
+            </TabsTrigger>
+          </TabsList>
 
-          <div className='space-y-2'>
-            <h3 className='text-sm font-medium text-muted-foreground'>Description</h3>
-            <p className='text-sm text-muted-foreground'>{task.description}</p>
-          </div>
+          <TabsContent value='overview' className='mt-6'>
+            <TaskOverviewTab task={task} />
+          </TabsContent>
 
-          {/* File Attachments Section */}
-          <div className='space-y-6'>
-            <h3 className='text-lg font-semibold text-gray-900'>Files & Attachments</h3>
+          <TabsContent value='files' className='mt-6'>
+            <TaskFilesTab
+              task={task}
+              userRole={userRole}
+              resultFiles={resultFiles}
+              contextFiles={contextFiles}
+              setResultFiles={setResultFiles}
+              setContextFiles={setContextFiles}
+              handleFileDownload={handleFileDownload}
+              handleFileDelete={handleFileDelete}
+              handleContextFileUpload={handleContextFileUpload}
+              isSubmitting={isSubmitting}
+              canEmployeeSubmit={canEmployeeSubmit}
+              canAdminReview={canAdminReview}
+            />
+          </TabsContent>
 
-            {/* Context Files (Admin uploads for employee reference) */}
-            <div className='space-y-3'>
-              <div className='flex items-center gap-2'>
-                <div className='w-2 h-2 bg-blue-500 rounded-full'></div>
-                <h4 className='text-sm font-medium text-gray-700'>Reference Materials</h4>
-                <span className='text-xs text-gray-500'>• Context files from admin</span>
-              </div>
-
-              {userRole === 'admin' ? (
-                <div
-                  className={`relative border-2 border-dashed rounded-lg p-6 transition-all duration-200 ${
-                    dragActive && uploadType === 'context'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-                  }`}
-                  onDragEnter={e => handleDragEnter(e, 'context')}
-                  onDragLeave={handleDragLeave}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                >
-                  <input
-                    type='file'
-                    id='context-upload'
-                    className='absolute inset-0 w-full h-full opacity-0 cursor-pointer'
-                    onChange={handleContextFileUpload}
-                    disabled={isUploading}
-                  />
-                  <div className='text-center'>
-                    <div className='mx-auto w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-3'>
-                      <Paperclip className='w-6 h-6 text-blue-600' />
-                    </div>
-                    <p className='text-sm font-medium text-gray-900 mb-1'>
-                      {isUploading ? 'Uploading...' : 'Drop files here or click to upload'}
-                    </p>
-                    <p className='text-xs text-gray-500'>
-                      Add reference materials, requirements, or mockups
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className='text-center py-8 text-gray-500'>
-                  {task.attachments?.filter(att => att.attachmentType === 'context').length ===
-                  0 ? (
-                    <div>
-                      <FileText className='w-8 h-8 mx-auto mb-2 text-gray-400' />
-                      <p className='text-sm'>No reference materials yet</p>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            {/* Result Files (Employee uploads work results) */}
-            <div className='space-y-3'>
-              <div className='flex items-center gap-2'>
-                <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                <h4 className='text-sm font-medium text-gray-700'>Work Results</h4>
-                <span className='text-xs text-gray-500'>• Deliverables from employee</span>
-              </div>
-
-              {userRole === 'employee' &&
-              (task.status === 'in_progress' || task.status === 'completed') ? (
-                <div
-                  className={`relative border-2 border-dashed rounded-lg p-6 transition-all duration-200 ${
-                    dragActive && uploadType === 'result'
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-300 hover:border-green-400 hover:bg-gray-50'
-                  }`}
-                  onDragEnter={e => handleDragEnter(e, 'result')}
-                  onDragLeave={handleDragLeave}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                >
-                  <input
-                    type='file'
-                    id='result-upload'
-                    className='absolute inset-0 w-full h-full opacity-0 cursor-pointer'
-                    onChange={handleResultFileUpload}
-                    disabled={isUploading}
-                  />
-                  <div className='text-center'>
-                    <div className='mx-auto w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-3'>
-                      <Upload className='w-6 h-6 text-green-600' />
-                    </div>
-                    <p className='text-sm font-medium text-gray-900 mb-1'>
-                      {isUploading ? 'Uploading...' : 'Drop your work results here'}
-                    </p>
-                    <p className='text-xs text-gray-500'>
-                      Upload completed work, deliverables, or final outputs
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className='text-center py-8 text-gray-500'>
-                  {task.attachments?.filter(att => att.attachmentType === 'result').length === 0 ? (
-                    <div>
-                      <FileText className='w-8 h-8 mx-auto mb-2 text-gray-400' />
-                      <p className='text-sm'>No work results yet</p>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            {/* Feedback Files (Admin uploads when rejecting) */}
-            <div className='space-y-3'>
-              <div className='flex items-center gap-2'>
-                <div className='w-2 h-2 bg-orange-500 rounded-full'></div>
-                <h4 className='text-sm font-medium text-gray-700'>Feedback & Revisions</h4>
-                <span className='text-xs text-gray-500'>• Admin review notes</span>
-              </div>
-
-              <div className='text-center py-8 text-gray-500'>
-                {task.attachments?.filter(att => att.attachmentType === 'feedback').length === 0 ? (
-                  <div>
-                    <FileText className='w-8 h-8 mx-auto mb-2 text-gray-400' />
-                    <p className='text-sm'>No feedback files yet</p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            {/* Display all attachments in a modern grid */}
-            {task.attachments && task.attachments.length > 0 && (
-              <div className='space-y-4'>
-                <div className='border-t pt-4'>
-                  <h4 className='text-sm font-medium text-gray-700 mb-3'>Uploaded Files</h4>
-                  <div className='grid gap-3'>
-                    {task.attachments.map(attachment => {
-                      const typeConfig = {
-                        context: {
-                          color: 'blue',
-                          bg: 'bg-blue-50',
-                          border: 'border-blue-200',
-                          text: 'text-blue-700',
-                          icon: 'text-blue-500',
-                          label: 'Reference',
-                        },
-                        result: {
-                          color: 'green',
-                          bg: 'bg-green-50',
-                          border: 'border-green-200',
-                          text: 'text-green-700',
-                          icon: 'text-green-500',
-                          label: 'Result',
-                        },
-                        feedback: {
-                          color: 'orange',
-                          bg: 'bg-orange-50',
-                          border: 'border-orange-200',
-                          text: 'text-orange-700',
-                          icon: 'text-orange-500',
-                          label: 'Feedback',
-                        },
-                      }[attachment.attachmentType]
-
-                      return (
-                        <div
-                          key={attachment.id}
-                          className={`group relative p-4 rounded-lg border transition-all duration-200 hover:shadow-md ${typeConfig.bg} ${typeConfig.border}`}
-                        >
-                          <div className='flex items-start justify-between'>
-                            <div className='flex items-start gap-3 flex-1 min-w-0'>
-                              <div
-                                className={`w-10 h-10 rounded-lg bg-white border flex items-center justify-center flex-shrink-0`}
-                              >
-                                <FileText className={`w-5 h-5 ${typeConfig.icon}`} />
-                              </div>
-                              <div className='flex-1 min-w-0'>
-                                <div className='flex items-center gap-2 mb-1'>
-                                  <p className={`text-sm font-medium truncate ${typeConfig.text}`}>
-                                    {attachment.fileName}
-                                  </p>
-                                  <span
-                                    className={`text-xs px-2 py-0.5 rounded-full bg-white ${typeConfig.text} font-medium`}
-                                  >
-                                    {typeConfig.label}
-                                  </span>
-                                </div>
-                                <div className='flex items-center gap-2 text-xs text-gray-500'>
-                                  <span>{(attachment.fileSize / 1024).toFixed(1)} KB</span>
-                                  <span>•</span>
-                                  <span>{attachment.uploadedAt.toLocaleDateString()}</span>
-                                  <span>•</span>
-                                  <span className='capitalize'>{attachment.uploadedByRole}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              className='opacity-0 group-hover:opacity-100 transition-opacity'
-                              onClick={() => handleFileDownload(attachment)}
-                            >
-                              <Download className='w-4 h-4' />
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {userRole === 'admin' && task.status === 'completed' && (
-            <>
-              <div className='space-y-4'>
-                <h3 className='text-sm font-medium text-muted-foreground'>Review Task</h3>
-                <Textarea
-                  placeholder='Add a revision comment... (Required for revision request)'
-                  value={revisionComment}
-                  onChange={e => setRevisionComment(e.target.value)}
-                />
-
-                {/* Feedback File Upload for Rejection */}
-                <div className='space-y-3'>
-                  <label className='text-sm font-medium text-gray-700'>
-                    Add Feedback Files (Optional)
-                  </label>
-                  <div
-                    className={`relative border-2 border-dashed rounded-lg p-4 transition-all duration-200 ${
-                      dragActive && uploadType === 'feedback'
-                        ? 'border-orange-500 bg-orange-50'
-                        : 'border-gray-300 hover:border-orange-400 hover:bg-gray-50'
-                    }`}
-                    onDragEnter={e => handleDragEnter(e, 'feedback')}
-                    onDragLeave={handleDragLeave}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  >
-                    <input
-                      type='file'
-                      id='feedback-upload'
-                      className='absolute inset-0 w-full h-full opacity-0 cursor-pointer'
-                      onChange={handleFeedbackFileUpload}
-                      disabled={isUploading}
-                    />
-                    <div className='text-center'>
-                      <div className='mx-auto w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-2'>
-                        <Paperclip className='w-5 h-5 text-orange-600' />
-                      </div>
-                      <p className='text-sm font-medium text-gray-900 mb-1'>
-                        {isUploading ? 'Uploading...' : 'Drop feedback files here'}
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        Add images, markups, or documents to explain revisions
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className='flex justify-end gap-2 mt-2'>
-                  <Button
-                    variant='destructive'
-                    onClick={handleRequestRevision}
-                    disabled={isSubmitting || !revisionComment.trim()}
-                  >
-                    <XCircle className='mr-2 h-4 w-4' />
-                    Reject Task
-                  </Button>
-                  <Button onClick={handleApprove} disabled={isSubmitting}>
-                    <CheckCircle className='mr-2 h-4 w-4' />
-                    Approve Task
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {userRole === 'employee' &&
-            (task.status === 'rejected' || task.status === 'revision') && (
-              <div className='flex justify-end'>
-                <Button
-                  onClick={async () => {
-                    try {
-                      setIsSubmitting(true)
-                      await updateDoc(doc(db, 'tasks', task.id), {
-                        status: 'in_progress',
-                        updatedAt: serverTimestamp(),
-                      })
-                      // Refresh data to ensure UI reflects the latest state
-                      if (onDataRefresh) {
-                        await onDataRefresh()
-                      }
-                      onOpenChange(false)
-                      toast({ title: 'Task resumed, please continue working!' })
-                    } catch (err) {
-                      toast({
-                        title: 'Failed to update task status',
-                        description: (err as any)?.message || 'An error occurred.',
-                        variant: 'destructive',
-                      })
-                    } finally {
-                      setIsSubmitting(false)
-                    }
-                  }}
-                  disabled={isSubmitting}
-                >
-                  Resume Task
-                </Button>
-              </div>
-            )}
-        </div>
+          <TabsContent value='actions' className='mt-6'>
+            <TaskActionsTab
+              task={task}
+              canEmployeeSubmit={canEmployeeSubmit}
+              canAdminReview={canAdminReview}
+              employeeComment={employeeComment}
+              reviewComment={reviewComment}
+              feedbackFiles={feedbackFiles}
+              setFeedbackFiles={setFeedbackFiles}
+              handleEmployeeCommentChange={handleEmployeeCommentChange}
+              handleReviewCommentChange={handleReviewCommentChange}
+              handleFileDownload={handleFileDownload}
+              handleFileDelete={handleFileDelete}
+              handleEmployeeSubmit={handleEmployeeSubmit}
+              handleAdminReview={handleAdminReview}
+              isSubmitting={isSubmitting}
+              userRole={userRole}
+            />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   )
