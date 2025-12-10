@@ -7,17 +7,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { addExistingProjectToTeam, getTeams, removeTeamFromProject } from '@/lib/database'
-import { Team } from '@/types'
-
-import { DialogDescription } from '@radix-ui/react-dialog'
 import {
-  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@radix-ui/react-select'
+} from '@/components/molecules/select'
+
+import { Select } from '@/components/molecules/select'
+import { addExistingProjectToTeam, getTeams, removeTeamFromProject } from '@/lib/database'
+import type { Team } from '@/types'
+import { DialogDescription } from '@radix-ui/react-dialog'
 import { CircleX, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
