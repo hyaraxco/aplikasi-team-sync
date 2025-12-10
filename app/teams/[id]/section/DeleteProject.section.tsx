@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Project } from '@/types'
+import type { Project } from '@/lib/firestore'
 
 interface DeleteProjectDialogProps {
   isOpen: boolean

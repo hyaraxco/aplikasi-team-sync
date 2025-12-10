@@ -1,6 +1,5 @@
 'use client'
 
-import { UserStatusBadge } from '@/components/atomics'
 import { Button } from '@/components/atomics/button'
 import {
   Table,
