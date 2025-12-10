@@ -3,8 +3,7 @@
 import { EditTeamDialog } from '@/app/teams/[id]/section/EditTeam.section'
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
-import { DeleteConfirmDialog } from '@/components/delete-confirm-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import {
   deleteTeam,
   getTeamActivities,
@@ -25,8 +24,10 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 // Import child components and their necessary types
-import { PageHeader } from '@/components/organisms/PageHeader'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics'
 import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
+import { DeleteConfirmDialog } from '@/components/organisms'
+import { PageHeader } from '@/components/organisms/PageHeader'
 import { EditLeaderDialog } from './EditLeader.section'
 import { MembersTable, type EnrichedTeamMember } from './MemberTable.section'
 import { ProjectsTable } from './ProjectTable.section'

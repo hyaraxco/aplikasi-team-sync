@@ -4,6 +4,13 @@ import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/atomics/select'
 import { useAuth } from '@/components/auth-provider'
 import { DatePicker } from '@/components/molecules/AntDatePicker'
 import {
@@ -22,14 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/atomics/select'
-import { Textarea } from '@/components/ui/textarea'
+
+import { Textarea } from '@/components/atomics/textarea'
 import { useToast } from '@/hooks'
 import {
   getUsers,

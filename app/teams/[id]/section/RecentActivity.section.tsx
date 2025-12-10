@@ -1,9 +1,9 @@
 'use client'
 
+import { ScrollArea } from '@/components/atomics'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
-import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { getActivityDisplayMessage } from '@/lib/activity-formatter'
 import { type Activity as BaseActivity, type UserData, ActivityActionType } from '@/lib/firestore'
 import { formatDistanceToNow } from 'date-fns'

@@ -1,8 +1,8 @@
 'use client'
 
-import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { Badge } from '@/components/atomics'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
-import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { addDays, differenceInCalendarDays, format, isBefore } from 'date-fns'
 import { Clock, Flag } from 'lucide-react'
 

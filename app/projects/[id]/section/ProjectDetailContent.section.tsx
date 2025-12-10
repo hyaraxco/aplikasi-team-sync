@@ -2,8 +2,7 @@
 
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
-import { DeleteConfirmDialog } from '@/components/delete-confirm-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
+import { DeleteConfirmDialog } from '@/components/organisms'
 import {
   deleteProject,
   getProjectActivities,
@@ -15,6 +14,7 @@ import {
   type Task,
   type UserData,
 } from '@/lib/firestore'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs'
 import { ArrowLeft, Edit2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'

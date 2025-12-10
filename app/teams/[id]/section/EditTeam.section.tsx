@@ -14,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Spinner } from '@/components/ui/spinner'
-import { Textarea } from '@/components/ui/textarea'
+
+import { Spinner, Textarea } from '@/components/atomics'
 import { ActivityActionType, addActivity, updateTeam } from '@/lib/firestore'
 import { serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'

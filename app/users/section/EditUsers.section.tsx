@@ -1,5 +1,6 @@
 'use client'
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/atomics'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
@@ -12,13 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+
 import {
   ActivityActionType,
   addActivity,

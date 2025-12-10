@@ -1,9 +1,8 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
-import { Badge } from '@/components/ui/badge'
-import { Table } from '@/components/ui/table'
 import { format } from 'date-fns'
+import { Badge, Table } from 'lucide-react'
 
 interface Milestone {
   id: string

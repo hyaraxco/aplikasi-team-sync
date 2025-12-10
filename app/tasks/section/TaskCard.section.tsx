@@ -1,8 +1,8 @@
 'use client'
 
+import { Badge } from '@/components/atomics'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/avatar'
 import { Card, CardContent } from '@/components/molecules/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { cn, getPriorityBadge } from '@/lib/utils'
 import { format } from 'date-fns'
 import { Calendar, CheckCircle, Clock, Eye, Hourglass, XCircle } from 'lucide-react'

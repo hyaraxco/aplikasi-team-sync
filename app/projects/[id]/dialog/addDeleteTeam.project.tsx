@@ -1,3 +1,4 @@
+import { Badge } from '@/components/atomics/badge'
 import { Button } from '@/components/atomics/Button.atomic'
 import { Label } from '@/components/atomics/label'
 import {
@@ -7,14 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { Badge } from '@/components/atomics/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+
 import {
   addExistingProjectToTeam,
   getTeams,
@@ -22,6 +16,13 @@ import {
   type Team,
 } from '@/lib/firestore'
 import { DialogDescription } from '@radix-ui/react-dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@radix-ui/react-select'
 import { CircleX, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 

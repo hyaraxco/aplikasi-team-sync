@@ -1,5 +1,4 @@
-import { AttendanceContent } from '@/components/attendance-content'
-import { DashboardLayout } from '@/components/dashboard-layout'
+import { AttendanceContent, DashboardLayout } from '@/components/templates'
 
 export default function AttendancePage() {
   return (
