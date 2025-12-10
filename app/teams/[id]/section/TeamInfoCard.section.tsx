@@ -1,6 +1,5 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
 import { Button } from '@/components/atomics/button'
 import {
   Card,
@@ -74,14 +73,10 @@ export function TeamInfoCard({
         {lead && (
           <div className='pt-2'>
             <h4 className='text-sm font-medium mb-2 text-muted-foreground'>Team Lead</h4>
-            <div className='flex items-center gap-3 rounded-lg bg-muted/30'>
-              <Avatar className='h-10 w-10'>
-                <AvatarImage src={lead?.avatarUrl} alt={lead.name} />
-                <AvatarFallback>{lead.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className='font-semibold text-sm'>{lead.name}</p>
-                <p className='text-xs text-muted-foreground'>{lead.role}</p>
+            <div className='flex items-center justify-between gap-3'>
+              <div className='flex flex-col'>
+                <span className='font-semibold text-sm'>{lead.name}</span>
+                <span className='text-xs text-muted-foreground'>{lead.role}</span>
               </div>
               {isAdmin && (
                 <Button

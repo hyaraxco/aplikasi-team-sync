@@ -9,7 +9,6 @@
  */
 
 import { Timestamp } from 'firebase/firestore'
-import { LucideIcon } from 'lucide-react'
 
 /**
  * Utility type for making specific properties optional
@@ -58,91 +57,128 @@ export interface CurrencyFormatOptions {
   locale?: string
 }
 
-/**
- * Type for badge configuration
- */
-export interface BadgeConfig {
-  /** CSS color class */
-  color: string
-  /** Optional icon component */
-  Icon?: LucideIcon
-}
+// ============================================================================
+// RE-EXPORTS FROM SPECIALIZED TYPE MODULES
+// ============================================================================
 
 /**
- * Type for API response wrapper
+ * Database entity types
  */
-export interface ApiResponse<T = any> {
-  success: boolean
-  data?: T
-  error?: string
-  message?: string
-}
+export type {
+  // Activity types
+  Activity,
+  ActivityType,
+  // Attendance types
+  AttendanceRecord,
+  // Base types
+  BaseEntity,
+  // Earning types
+  Earning,
+  Milestone,
+  // Payroll types
+  Payroll,
+  PayrollStatus,
+  // Project types
+  Project,
+  ProjectMetrics,
+  ProjectPriority,
+  ProjectStatus,
+  // Task types
+  Task,
+  TaskAttachment,
+  TaskComment,
+  TaskPriority,
+  TaskStatus,
+  // Team types
+  Team,
+  TeamMember,
+  TeamMetrics,
+  UserData,
+  // User types
+  UserRole,
+} from './database'
 
 /**
- * Type for pagination parameters
+ * UI-related types (filters, sorting, styling)
  */
-export interface PaginationParams {
-  page: number
-  limit: number
-  sortBy?: string
-  sortOrder?: 'asc' | 'desc'
-}
+export type {
+  AdvancedFilterState,
+  AsyncState,
+  BadgeConfig,
+  CommonFilterTypes,
+  FilterActions,
+  FilterBarConfig,
+  FilterCondition,
+  FilterConfig,
+  FilterOperator,
+  FilterOption,
+  FilterResult,
+  FilterState,
+  FilterValue,
+  NotificationType,
+  PaginationParams,
+  Theme,
+  UseFilterReturn,
+  ValidationErrors,
+} from './ui'
 
 /**
- * Type for filter state
+ * API-related types
  */
-export interface FilterState<T = any> {
-  searchTerm: string
-  filters: Record<string, string[]>
-  sortField: keyof T
-  sortDirection: 'asc' | 'desc'
-}
+export type {
+  ApiErrorResponse,
+  ApiResponse,
+  BaseApiRequest,
+  BulkOperationRequest,
+  BulkOperationResponse,
+  ExportRequest,
+  ExportResponse,
+  FileUploadRequest,
+  FileUploadResponse,
+  HealthCheckResponse,
+  PaginatedApiResponse,
+  PaginatedRequest,
+  RateLimitedResponse,
+  RateLimitInfo,
+  SearchRequest,
+  WebhookPayload,
+  WebhookResponse,
+} from './api'
 
 /**
- * Type for filter actions
+ * Security-related types
  */
-export interface FilterActions<T = any> {
-  setSearchTerm: (term: string) => void
-  toggleFilter: (type: string, value: string) => void
-  clearFilters: () => void
-  handleSort: (field: keyof T) => void
-  setSortDirection: (direction: 'asc' | 'desc') => void
-}
+export type {
+  AuthAttemptResult,
+  MFAConfig,
+  PermissionContext,
+  PermissionLevel,
+  ProjectPermissions,
+  RateLimitConfig,
+  RateLimitStatus,
+  ResourcePermission,
+  SecurityActivityType,
+  SecurityAuditLog,
+  SecurityConfig,
+  SecurityEvent,
+  SecurityEventDetails,
+  SecuritySeverity,
+  SessionInfo,
+  TaskPermissions,
+  UserSecurityProfile,
+} from './security'
 
 /**
- * Type for form validation errors
+ * Component prop types
+ * Note: Component prop types are defined inline with their respective components
+ * for better maintainability and co-location of types with implementation
  */
-export type ValidationErrors<T> = Partial<Record<keyof T, string>>
-
-/**
- * Type for async operation states
- */
-export type AsyncState = 'idle' | 'loading' | 'success' | 'error'
-
-/**
- * Type for theme preferences
- */
-export type Theme = 'light' | 'dark' | 'system'
-
-/**
- * Type for notification types
- */
-export type NotificationType = 'success' | 'error' | 'warning' | 'info'
-
-/**
- * Generic type for database entities with common fields
- */
-export interface BaseEntity {
-  id: string
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
 
 /**
  * Type for user preferences
  */
 export interface UserPreferences {
-  theme: Theme
+  theme: 'light' | 'dark' | 'system'
   language: string
   notifications: {
     email: boolean
@@ -163,3 +199,6 @@ export interface AppError extends Error {
   context?: Record<string, any>
   timestamp?: Date
 }
+
+// Export enums as values
+export { ActivityActionType } from './database'

@@ -103,6 +103,45 @@ firestore-debug.log
 *.generated.*
 *.auto.*
 
-# Documentation
-docs/
-*.md
+# Documentation (allow formatting for cleanup)
+# docs/ - commented out to allow cleanup
+# *.md - commented out to allow cleanup
+
+# Additional files to ignore during cleanup
+*.lock
+*.log
+*.tsbuildinfo
+.env*
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Firebase configuration files (important - don't format)
+.firebaserc
+firestore.rules
+firestore.indexes.json
+firebase.json
+
+# Allow scripts directory to be formatted
+# scripts/ - commented out to allow cleanup
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated or binary files
+*.min.js
+*.min.css
+*.map
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.ico
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp

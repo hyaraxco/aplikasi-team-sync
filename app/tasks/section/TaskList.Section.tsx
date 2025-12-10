@@ -12,6 +12,7 @@ interface TaskListProps {
   droppableId: string
   enableDragDrop?: boolean
   onApproveTask?: (task: TaskCardProps) => void
+  userRole?: 'admin' | 'employee'
 }
 
 const TaskList: React.FC<TaskListProps> = ({
@@ -21,6 +22,7 @@ const TaskList: React.FC<TaskListProps> = ({
   droppableId,
   enableDragDrop = false,
   onApproveTask,
+  userRole = 'employee',
 }) => {
   // Count tasks by approval status
   const pendingApprovalCount = tasks.filter(
@@ -46,21 +48,36 @@ const TaskList: React.FC<TaskListProps> = ({
                 className='space-y-2 min-h-[200px]'
               >
                 {tasks.length > 0 ? (
-                  tasks.map((task, index) => (
-                    <Draggable key={task.id} draggableId={task.id} index={index}>
-                      {provided => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <div className='relative'>
-                            <TaskCard {...task} onClick={() => onTaskClick(task)} />
+                  tasks.map((task, index) => {
+                    // Disable dragging for employees when task is completed (pending review) or done (approved)
+                    const isDragDisabled =
+                      userRole === 'employee' &&
+                      (task.status === 'completed' || task.status === 'done')
+
+                    return (
+                      <Draggable
+                        key={task.id}
+                        draggableId={task.id}
+                        index={index}
+                        isDragDisabled={isDragDisabled}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                            }}
+                          >
+                            <div className='relative'>
+                              <TaskCard {...task} onClick={() => onTaskClick(task)} />
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))
+                        )}
+                      </Draggable>
+                    )
+                  })
                 ) : (
                   <div className='flex items-center justify-center h-[200px] border border-dashed rounded-lg'>
                     <p className='text-muted-foreground text-sm'>No tasks</p>

@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
+import { Skeleton } from '@/components/atomics/skeleton'
 import { useAuth } from '@/components/auth-provider'
 import {
   Card,
@@ -9,22 +10,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/card'
-import { useCallback, useEffect, useState } from 'react'
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
-
-import { Skeleton } from '@/components/atomics/skeleton'
-
 import {
   getAttendanceRecords,
   getTodaysAttendance,
   checkIn as newCheckIn,
   checkOut as newCheckOut,
-  type AttendanceRecord,
-} from '@/lib/firestore'
+} from '@/lib/database'
+import type { AttendanceRecord } from '@/types'
 import { format, getHours } from 'date-fns'
 import { Clock, Info, LogIn, LogOut } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
+import { useCallback, useEffect, useState } from 'react'
+import { Alert, AlertDescription, AlertTitle } from '../atomics/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../molecules'
 
 export function AttendanceContent() {
   const { user, userRole } = useAuth()
@@ -190,13 +187,17 @@ export function AttendanceContent() {
     )
   }
 
-  const employeeAttendanceSection = userRole !== 'admin' && (
+  const attendanceSection = (
     <Card className='mb-6'>
       <CardHeader>
         <CardTitle className='flex items-center'>
           <Clock className='mr-2 h-6 w-6' /> Today's Attendance
         </CardTitle>
-        <CardDescription>Clock-in and clock-out according to schedule.</CardDescription>
+        <CardDescription>
+          {userRole === 'admin'
+            ? 'Admin attendance tracking - Clock-in and clock-out according to schedule.'
+            : 'Clock-in and clock-out according to schedule.'}
+        </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         {error && (
@@ -206,7 +207,7 @@ export function AttendanceContent() {
           </Alert>
         )}
         {statusMessage && (
-          <Alert variant={todaysAttendance?.checkOut ? 'success' : 'default'}>
+          <Alert variant={todaysAttendance?.checkOut ? 'destructive' : 'default'}>
             <Info className='h-4 w-4' />
             <AlertTitle>Status</AlertTitle>
             <AlertDescription>{statusMessage}</AlertDescription>
@@ -243,7 +244,7 @@ export function AttendanceContent() {
     <div className='space-y-6 p-4 md:p-6'>
       <h1 className='text-3xl font-bold tracking-tight'>Attendance</h1>
 
-      {employeeAttendanceSection}
+      {attendanceSection}
 
       <Tabs defaultValue='my_records' className='space-y-4'>
         <TabsList>

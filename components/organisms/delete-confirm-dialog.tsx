@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
+import { Spinner } from '@/components/atomics/spinner'
 import {
   Dialog,
   DialogContent,
@@ -9,10 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/hooks'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Spinner } from '@/components/atomics/spinner'
 
 interface DeleteConfirmDialogProps {
   isOpen: boolean

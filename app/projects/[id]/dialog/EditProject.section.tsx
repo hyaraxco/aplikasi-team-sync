@@ -3,6 +3,7 @@
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
+import { Textarea } from '@/components/atomics/textarea'
 import {
   Dialog,
   DialogContent,
@@ -11,22 +12,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
+import { useRouter } from 'next/navigation'
+import type React from 'react'
+import { useRef, useState } from 'react'
+
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/atomics/select'
-import { Textarea } from '@/components/atomics/textarea'
-import { useRouter } from 'next/navigation'
-import type React from 'react'
-import { useRef, useState } from 'react'
-
+} from '@/components/molecules'
 import { DatePicker } from '@/components/molecules/AntDatePicker'
-import { useToast } from '@/hooks/use-toast'
-import { ProjectPriority, ProjectStatus, Timestamp, updateProject } from '@/lib/firestore'
+import { useToast } from '@/hooks'
+import { updateProject } from '@/lib/database'
+import type { ProjectPriority, ProjectStatus } from '@/types'
+import { Timestamp } from 'firebase/firestore'
 import { Loader2 } from 'lucide-react'
+
+// Define the available options for priority and status
+const PRIORITY_OPTIONS: ProjectPriority[] = ['low', 'medium', 'high']
+const STATUS_OPTIONS: ProjectStatus[] = ['planning', 'in-progress', 'completed', 'on-hold']
 
 interface EditProjectDialogProps {
   isOpen: boolean
@@ -187,7 +193,7 @@ export function EditProjectDialog({
                     <SelectValue placeholder='Select priority' />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.values(ProjectPriority).map(p => (
+                    {PRIORITY_OPTIONS.map(p => (
                       <SelectItem key={p} value={p}>
                         {p.charAt(0).toUpperCase() + p.slice(1)}
                       </SelectItem>
@@ -202,7 +208,7 @@ export function EditProjectDialog({
                     <SelectValue placeholder='Select status' />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.values(ProjectStatus).map(s => (
+                    {STATUS_OPTIONS.map(s => (
                       <SelectItem key={s} value={s}>
                         {s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ')}
                       </SelectItem>

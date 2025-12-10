@@ -1,7 +1,6 @@
 'use client'
 
 import { Button } from '@/components/atomics/button'
-import { useAuth } from '@/components/auth-provider'
 import {
   Table,
   TableBody,
@@ -10,9 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/atomics/table'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
-import { useEarnings } from '@/hooks/use-earnings'
-import { formatRupiah } from '@/lib/utils'
+import { useAuth } from '@/components/auth-provider'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules/tabs'
+import { useEarnings } from '@/hooks'
+import { formatRupiah } from '@/lib/ui'
 import { format } from 'date-fns'
 
 export function EarningsContent() {

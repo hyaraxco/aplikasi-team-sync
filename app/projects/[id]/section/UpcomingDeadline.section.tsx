@@ -1,6 +1,6 @@
 'use client'
 
-import { Badge } from '@/components/atomics'
+import { Badge } from '@/components/atomics/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { addDays, differenceInCalendarDays, format, isBefore } from 'date-fns'

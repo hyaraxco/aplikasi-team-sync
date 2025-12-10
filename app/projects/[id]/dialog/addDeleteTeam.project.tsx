@@ -1,6 +1,5 @@
+import { Button, Label } from '@/components/atomics'
 import { Badge } from '@/components/atomics/badge'
-import { Button } from '@/components/atomics/Button.atomic'
-import { Label } from '@/components/atomics/label'
 import {
   Dialog,
   DialogContent,
@@ -8,13 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
+import { addExistingProjectToTeam, getTeams, removeTeamFromProject } from '@/lib/database'
+import { Team } from '@/types'
 
-import {
-  addExistingProjectToTeam,
-  getTeams,
-  removeTeamFromProject,
-  type Team,
-} from '@/lib/firestore'
 import { DialogDescription } from '@radix-ui/react-dialog'
 import {
   Select,
@@ -54,7 +49,7 @@ export function AddTeamDialog({
       setSelectedTeams([]) // Reset selected teams when dialog opens
       setError(null) // Reset error state
       const allTeams = await getTeams(undefined, 'admin')
-      setTeams(allTeams.filter(t => !existingTeamIds.includes(t.id)))
+      setTeams(allTeams.filter((t: Team) => !existingTeamIds.includes(t.id)))
       setLoading(false)
     }
     if (isOpen) {

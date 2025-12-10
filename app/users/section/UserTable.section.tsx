@@ -1,11 +1,12 @@
 'use client'
 
-import { Avatar, AvatarImage } from '@/components/atomics/Avatar.atomic'
 import { Button } from '@/components/atomics/button'
+import { EarningsCell } from '@/components/molecules'
+import { Avatar, AvatarImage } from '@/components/molecules/avatar'
 import { Card, CardContent } from '@/components/molecules/card'
-import { CheckCircle2, Edit, Mail, Phone, Trash2Icon, User, XCircle } from 'lucide-react'
+import { CheckCircle2, Edit, Mail, Phone, Trash2Icon, User, Users, XCircle } from 'lucide-react'
 
-import { Badge } from '@/components/atomics/badge'
+import { UserStatusBadge } from '@/components/atomics'
 import { Skeleton } from '@/components/atomics/skeleton'
 import {
   Table,
@@ -15,8 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/atomics/table'
-import { type UserData } from '@/lib/firestore'
-import { formatDate, formatRupiah } from '@/lib/utils'
+import { EmptyState } from '@/components/molecules/data-display'
+import { useProcessedEarnings } from '@/hooks' // Added useProcessedEarnings hook
+import { formatDate } from '@/lib/ui'
+import type { UserData } from '@/types'
+import { useMemo } from 'react'
 
 interface UserTableProps {
   users: UserData[]
@@ -39,48 +43,29 @@ export default function UserTable({
   onReactivate,
   onHardDelete,
 }: UserTableProps) {
-  const getStatusBadge = (users: UserData) => {
-    const statusValue = users.status ? users.status.toLowerCase() : ''
-    switch (statusValue) {
-      case 'active':
-        return (
-          <Badge className='bg-green-100 text-green-700 border-green-200'>{users.status}</Badge>
-        )
-      case 'inactive':
-        return (
-          <Badge variant='outline' className='border-gray-300 text-gray-600'>
-            {users.status}
-          </Badge>
-        )
-      case 'pending':
-        return (
-          <Badge variant='outline' className='border-blue-300 text-blue-600'>
-            {users.status}
-          </Badge>
-        )
-      case 'on leave':
-        return (
-          <Badge variant='secondary' className='bg-yellow-100 text-yellow-700 border-yellow-200'>
-            {users.status}
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant='outline' className='border-gray-300 text-gray-600'>
-            Unknown
-          </Badge>
-        )
-    }
-  }
+  // Get earnings data for all users with real-time updates
+  // Memoize userIds to prevent infinite re-renders
+  const userIds = useMemo(() => users.map(user => user.id), [users]) // Added useMemo to prevent infinite re-renders. Added useMemo to prevent infinite re-renders.
+  const earningsMap = useProcessedEarnings(userIds)
 
-  const emptyStateMessage = () => {
+  const getEmptyStateProps = () => {
     if (allUsersCount === 0) {
-      return "No users have been added to the system yet. Click 'Add User' to get started."
+      return {
+        title: 'No users yet',
+        description: "No users have been added to the system yet. Click 'Add User' to get started.",
+      }
     }
     if (users.length === 0 && allUsersCount > 0) {
-      return 'No users found matching your current filters. Try adjusting or clearing the filters.'
+      return {
+        title: 'No users found',
+        description:
+          'No users found matching your current filters. Try adjusting or clearing the filters.',
+      }
     }
-    return 'Something went wrong or no data to display.'
+    return {
+      title: 'No data available',
+      description: 'Something went wrong or no data to display.',
+    }
   }
 
   return (
@@ -92,7 +77,7 @@ export default function UserTable({
               <TableHead>Name</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Position</TableHead>
-              <TableHead>Salary</TableHead>
+              <TableHead>Earnings</TableHead>
               <TableHead>Join Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className='text-center'>Actions</TableHead>
@@ -104,15 +89,19 @@ export default function UserTable({
                 .fill(0)
                 .map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={8} className='py-6'>
+                    <TableCell colSpan={7} className='py-6'>
                       <Skeleton className='h-6 w-full' />
                     </TableCell>
                   </TableRow>
                 ))
             ) : (users.length === 0 || allUsersCount === 0) && !loading ? (
               <TableRow>
-                <TableCell colSpan={8} className='text-center py-10'>
-                  {emptyStateMessage()}
+                <TableCell colSpan={7} className='text-center py-10'>
+                  <EmptyState
+                    icon={<Users className='h-8 w-8 text-muted-foreground' />}
+                    title={getEmptyStateProps().title}
+                    description={getEmptyStateProps().description}
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -171,10 +160,29 @@ export default function UserTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {typeof user.baseSalary === 'number' ? formatRupiah(user.baseSalary) : '-'}
+                    {(() => {
+                      const userEarnings = earningsMap.get(user.id)
+                      if (!userEarnings) {
+                        return <Skeleton className='h-6 w-20' />
+                      }
+                      return (
+                        <EarningsCell
+                          taskEarnings={userEarnings.taskEarnings}
+                          attendanceEarnings={userEarnings.attendanceEarnings}
+                          totalEarnings={userEarnings.totalEarnings}
+                          taskCount={userEarnings.taskCount}
+                          attendanceCount={userEarnings.attendanceCount}
+                          loading={userEarnings.loading}
+                          error={userEarnings.error}
+                          userRole={user.role}
+                        />
+                      )
+                    })()}
                   </TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>
-                  <TableCell>{getStatusBadge(user)}</TableCell>
+                  <TableCell>
+                    <UserStatusBadge status={user.status} />
+                  </TableCell>
                   <TableCell>
                     <div className='flex items-center'>
                       <Button

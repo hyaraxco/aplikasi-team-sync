@@ -1,8 +1,6 @@
 'use client'
 
-import { Button } from '@/components/atomics/Button.atomic'
-import { Input } from '@/components/atomics/Input.atomic'
-import { useAuth } from '@/components/auth-provider'
+import { Button, Input } from '@/components/atomics'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/molecules/Dialog.molecule'
+} from '@/components/molecules/dialog'
 import {
   Form,
   FormControl,
@@ -19,14 +17,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/molecules/Form.molecule'
+} from '@/components/molecules/form'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/molecules/Select.molecule'
+} from '@/components/molecules/select'
+
+import { useAuth } from '@/components/auth-provider'
 import {
   ActivityActionType,
   addActivity,
@@ -34,7 +34,7 @@ import {
   setTeamLeader,
   updateTeamMemberDetails,
   type TeamMember,
-} from '@/lib/firestore'
+} from '@/lib/database'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { serverTimestamp } from 'firebase/firestore'
 import { Loader2 } from 'lucide-react'
