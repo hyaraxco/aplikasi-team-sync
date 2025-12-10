@@ -1,8 +1,8 @@
 'use client'
 
-import { Progress } from '@/components/atomics/progress'
+import { Progress } from '@/components/molecules'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
-import type { ProjectMetrics } from '@/lib/firestore'
+import { ProjectMetrics } from '@/types'
 import { differenceInDays } from 'date-fns'
 
 interface ProjectStatsCardProps {

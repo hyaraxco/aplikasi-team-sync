@@ -1,0 +1,36 @@
+{
+  "recommendations": [
+    // Essential for code formatting and linting
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    
+    // TypeScript and JavaScript support
+    "ms-vscode.vscode-typescript-next",
+    
+    // React and Next.js support
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-json",
+    
+    // Git integration
+    "eamodio.gitlens",
+    
+    // File icons and themes
+    "vscode-icons-team.vscode-icons",
+    
+    // Productivity tools
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "ms-vscode.vscode-json",
+    
+    // Firebase support
+    "toba.vsfire",
+
+    // Markdown support
+    "yzhang.markdown-all-in-one"
+  ],
+  "unwantedRecommendations": [
+    // Avoid conflicts with our setup
+    "ms-vscode.vscode-typescript",
+    "hookyqr.beautify"
+  ]
+}

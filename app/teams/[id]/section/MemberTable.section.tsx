@@ -1,28 +1,25 @@
 'use client'
 
-import { useAuth } from '@/components/auth-provider'
-
-import { useMemo, useState } from 'react'
-
+import { UserStatusBadge } from '@/components/atomics'
 import { Button } from '@/components/atomics/button'
-
 import {
-  Badge,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/atomics'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
+} from '@/components/atomics/table'
+import { useAuth } from '@/components/auth-provider'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules/avatar'
 import { Card } from '@/components/molecules/card'
 import { EmptyState } from '@/components/molecules/data-display/EmptyState'
-import type { Timestamp as FirestoreTimestamp, TeamMember, UserData } from '@/lib/firestore' // Added Timestamp type
-import { ActivityActionType, addActivity, removeTeamMember } from '@/lib/firestore'
+import type { Timestamp as FirestoreTimestamp, TeamMember, UserData } from '@/lib/database' // Added Timestamp type
+import { ActivityActionType, addActivity, removeTeamMember } from '@/lib/database'
 import { format } from 'date-fns'
 import { serverTimestamp } from 'firebase/firestore'
 import { Edit, Mail, Phone, Trash2Icon, User, Users } from 'lucide-react' // Removed UserPlus, Filter, ArrowUpDown as they are in MemberFilterBar
+import { useMemo, useState } from 'react'
 import { AddMemberDialog } from './AddMember.section'
 import { DeleteMemberDialog } from './DeleteMember.section'
 import { EditMemberDialog } from './EditMember.section'
@@ -227,34 +224,6 @@ export function MembersTable({
     return filtered
   }, [members, searchTerm, filterRoles, filterStatus, sort, currentSortDir])
 
-  const getStatusBadge = (member: TeamMember) => {
-    const statusValue = member.status ? member.status.toLowerCase() : ''
-    switch (statusValue) {
-      case 'active':
-        return (
-          <Badge className='bg-green-100 text-green-700 border-green-200'>{member.status}</Badge>
-        )
-      case 'inactive':
-        return (
-          <Badge variant='outline' className='border-gray-300 text-gray-600'>
-            {member.status}
-          </Badge>
-        )
-      case 'on leave':
-        return (
-          <Badge variant='secondary' className='bg-yellow-100 text-yellow-700 border-yellow-200'>
-            {member.status}
-          </Badge>
-        )
-      default:
-        return (
-          <Badge variant='outline' className='border-gray-300 text-gray-600'>
-            Unknown
-          </Badge>
-        )
-    }
-  }
-
   return (
     <div className='space-y-4'>
       <MemberFilterBar
@@ -353,7 +322,9 @@ export function MembersTable({
                       {member.role || 'N/A'}
                       {user && <span className='flex items-center text-xs'>{user.department}</span>}
                     </TableCell>
-                    <TableCell>{getStatusBadge(member)}</TableCell>
+                    <TableCell>
+                      <UserStatusBadge status={member.status} />
+                    </TableCell>
                     <TableCell className='text-xs'>{joinDate}</TableCell>
                     <TableCell className={`${isAdmin ? 'text-right pr-2' : 'text-center'}`}>
                       <div

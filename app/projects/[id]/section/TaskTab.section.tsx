@@ -1,13 +1,17 @@
+'use client'
+
 import { Button } from '@/components/atomics/button'
 import { Card, CardContent } from '@/components/molecules/card'
 import { Checkbox } from '@radix-ui/react-checkbox'
 import { Calendar, Edit, ListIcon, Plus } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
-import { EmptyState } from '@/components/molecules/data-display/EmptyState'
 import { Skeleton } from '@/components/atomics/skeleton'
-import { getTasks, getUserData, type Task, type TaskStatus, type UserData } from '@/lib/firestore'
-import { getTaskPriorityBadge, getTaskStatusBadge } from '@/lib/utils'
+import { useAuth } from '@/components/auth-provider'
+import { EmptyState } from '@/components/molecules/data-display/EmptyState'
+import { getTasks, getUserData } from '@/lib/database'
+import { getTaskPriorityBadge, getTaskStatusBadge } from '@/lib/ui'
+import type { Task, TaskStatus, UserData } from '@/types'
 import AddTaskDialog from '../dialog/addTask.project'
 import EditTaskDialog from '../dialog/editTask.project'
 
@@ -16,10 +20,12 @@ interface TasksTabProps {
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({ projectId }) => {
+  const { userRole } = useAuth()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<Record<string, UserData>>({})
+  const [milestones, setMilestones] = useState<any[]>([])
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false)
   const [editTaskDialogOpen, setEditTaskDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -32,7 +38,8 @@ export const TasksTab: React.FC<TasksTabProps> = ({ projectId }) => {
         const fetchedTasks = await getTasks(undefined, projectId, 'admin')
 
         setTasks(fetchedTasks)
-        // Optionally fetch user data for assignees
+
+        // Fetch user data for assignees
         const userIds = Array.from(new Set(fetchedTasks.flatMap(t => t.assignedTo || [])))
         const userMap: Record<string, UserData> = {}
         await Promise.all(
@@ -42,6 +49,17 @@ export const TasksTab: React.FC<TasksTabProps> = ({ projectId }) => {
           })
         )
         setUsers(userMap)
+
+        // Fetch project milestones
+        try {
+          const { getProjectById } = await import('@/lib/database')
+          const project = await getProjectById(projectId)
+          if (project && project.milestones) {
+            setMilestones(project.milestones)
+          }
+        } catch (error) {
+          console.error('Error fetching milestones:', error)
+        }
       } catch (e) {
         setError('Failed to load tasks')
       } finally {
@@ -57,13 +75,38 @@ export const TasksTab: React.FC<TasksTabProps> = ({ projectId }) => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  // Sort tasks: done tasks at the bottom, others by creation date
-  const sortedTasks = [...tasks].sort((a, b) => {
-    // If one task is done and the other is not, done goes to bottom
-    if (a.status === 'done' && b.status !== 'done') return 1
-    if (a.status !== 'done' && b.status === 'done') return -1
+  // Get milestone that this task contributes to
+  const getTaskMilestone = (task: Task) => {
+    if (!milestones.length) return null
 
-    // If both are done or both are not done, sort by creation date (newest first)
+    const taskDeadline = task.deadline.toDate()
+
+    // Find milestones that this task contributes to (task deadline <= milestone due date)
+    const contributingMilestones = milestones.filter((milestone: any) => {
+      const milestoneDate = milestone.dueDate.toDate()
+      return taskDeadline <= milestoneDate
+    })
+
+    // Return the earliest milestone this task contributes to
+    if (contributingMilestones.length > 0) {
+      return contributingMilestones.sort(
+        (a: any, b: any) => a.dueDate.toDate().getTime() - b.dueDate.toDate().getTime()
+      )[0]
+    }
+
+    return null
+  }
+
+  // Sort tasks: done, rejected, and revision tasks at the bottom, others by creation date
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const aIsFinished = a.status === 'done' || a.status === 'rejected' || a.status === 'revision'
+    const bIsFinished = b.status === 'done' || b.status === 'rejected' || b.status === 'revision'
+
+    // If one task is finished and the other is not, finished goes to bottom
+    if (aIsFinished && !bIsFinished) return 1
+    if (!aIsFinished && bIsFinished) return -1
+
+    // If both are finished or both are not finished, sort by creation date (newest first)
     return b.createdAt.toMillis() - a.createdAt.toMillis()
   })
 
@@ -127,10 +170,12 @@ export const TasksTab: React.FC<TasksTabProps> = ({ projectId }) => {
           <h3 className='text-xl font-semibold'>Project Tasks</h3>
           <p className='text-muted-foreground'>Manage and track project tasks</p>
         </div>
-        <Button className='flex items-center gap-2' onClick={() => setAddTaskDialogOpen(true)}>
-          <Plus className='w-4 h-4' />
-          Add Task
-        </Button>
+        {userRole === 'admin' && (
+          <Button className='flex items-center gap-2' onClick={() => setAddTaskDialogOpen(true)}>
+            <Plus className='w-4 h-4' />
+            Add Task
+          </Button>
+        )}
       </div>
 
       {/* Tasks Grid */}
@@ -209,6 +254,14 @@ export const TasksTab: React.FC<TasksTabProps> = ({ projectId }) => {
                                   .join(', ')
                               : 'Unassigned'}
                           </span>
+                          {(() => {
+                            const milestone = getTaskMilestone(task)
+                            return milestone ? (
+                              <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
+                                📍 {milestone.title}
+                              </span>
+                            ) : null
+                          })()}
                         </div>
                         <div className='flex items-center gap-2'>
                           <div className='flex items-center gap-1 text-sm text-muted-foreground'>

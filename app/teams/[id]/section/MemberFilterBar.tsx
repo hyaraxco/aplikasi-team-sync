@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/molecules/dropdown-menu'
-import { MEMBER_STATUS } from '@/lib/constants'
+import { MEMBER_STATUS } from '@/lib/ui'
 import { Filter, Plus, Search, SortAsc, X } from 'lucide-react'
 
 interface MemberFilterBarProps {

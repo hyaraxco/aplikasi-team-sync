@@ -1,13 +1,15 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
+import { Avatar, AvatarFallback, AvatarImage, ScrollArea } from '@/components/molecules'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import { EmptyState } from '@/components/molecules/data-display/EmptyState'
-import { getActivityDisplayMessage } from '@/lib/activity-formatter'
-import { type Activity as BaseActivity, type UserData, ActivityActionType } from '@/lib/firestore'
-import { ScrollArea } from '@radix-ui/react-scroll-area'
+import { getUserData, resolveActorNameFromUserData } from '@/lib/database'
+import { formatActivityMessageWithUsers } from '@/lib/database/activity'
+import type { Activity as BaseActivity, UserData } from '@/types'
+import { ActivityActionType } from '@/types/database'
 import { formatDistanceToNow } from 'date-fns'
 import { Activity } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 // Extend Activity type to explicitly allow string actions for legacy support
 interface Activity extends Omit<BaseActivity, 'action'> {
@@ -24,6 +26,35 @@ export function ProjectRecentActivityCard({
   activities,
   usersDataMap,
 }: ProjectRecentActivityCardProps) {
+  const [internalUsersData, setInternalUsersData] = useState<Map<string, UserData>>(new Map())
+
+  // Fetch user data for activities if not provided via props
+  useEffect(() => {
+    const fetchUserData = async () => {
+      // Fetch user data internally
+      const uniqueUserIds = [...new Set(activities.map(activity => activity.userId))]
+      const userDataMap = new Map<string, UserData>()
+
+      await Promise.all(
+        uniqueUserIds.map(async userId => {
+          try {
+            const userData = await getUserData(userId)
+            if (userData) {
+              userDataMap.set(userId, userData)
+            }
+          } catch (error) {
+            console.error(`Error fetching user data for ${userId}:`, error)
+          }
+        })
+      )
+      setInternalUsersData(userDataMap)
+    }
+
+    if (activities.length > 0) {
+      fetchUserData()
+    }
+  }, [activities, usersDataMap])
+
   return (
     <Card>
       <CardHeader>
@@ -40,9 +71,60 @@ export function ProjectRecentActivityCard({
           <ScrollArea className='h-[250px]'>
             <ul className='space-y-4'>
               {activities.map(activity => {
-                // Attempt to get user for avatar, fallback if not available
-                const user = usersDataMap?.get(activity.userId)
-                const userName = user?.displayName || user?.email || 'User'
+                // Use internal user data or fallback to prop-provided data
+                const user =
+                  internalUsersData.get(activity.userId) || usersDataMap?.get(activity.userId)
+                let targetUser: UserData | undefined = undefined
+                const details = activity.details || {}
+                if (
+                  details.requestedBy &&
+                  (internalUsersData.get(details.requestedBy) ||
+                    usersDataMap?.get(details.requestedBy))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.requestedBy) ||
+                    usersDataMap?.get(details.requestedBy)
+                } else if (
+                  details.assignedTo &&
+                  (internalUsersData.get(details.assignedTo) ||
+                    usersDataMap?.get(details.assignedTo))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.assignedTo) ||
+                    usersDataMap?.get(details.assignedTo)
+                } else if (
+                  details.approvedBy &&
+                  (internalUsersData.get(details.approvedBy) ||
+                    usersDataMap?.get(details.approvedBy))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.approvedBy) ||
+                    usersDataMap?.get(details.approvedBy)
+                } else if (
+                  details.userId &&
+                  (internalUsersData.get(details.userId) || usersDataMap?.get(details.userId))
+                ) {
+                  targetUser =
+                    internalUsersData.get(details.userId) || usersDataMap?.get(details.userId)
+                }
+                if (
+                  !targetUser &&
+                  Array.isArray(details.assignedTo) &&
+                  details.assignedTo.length > 0
+                ) {
+                  const firstAssignee = details.assignedTo[0]
+                  targetUser =
+                    internalUsersData.get(firstAssignee) || usersDataMap?.get(firstAssignee)
+                }
+                const userName = user
+                  ? resolveActorNameFromUserData(user, {
+                      includeRole: true,
+                      showUserIdInFallback: true,
+                    })
+                  : 'Unknown User'
+                const displayMessage = formatActivityMessageWithUsers(activity, user, targetUser, {
+                  includeRole: true,
+                })
                 const userInitials = user?.displayName
                   ? user.displayName.substring(0, 2).toUpperCase()
                   : 'U'
@@ -52,9 +134,6 @@ export function ProjectRecentActivityCard({
                   'seconds' in activity.timestamp
                     ? new Date(activity.timestamp.seconds * 1000)
                     : new Date() // Fallback to now if timestamp is problematic
-
-                const displayMessage = getActivityDisplayMessage(activity, userName)
-
                 return (
                   <li key={activity.id} className='flex items-start gap-3'>
                     <Avatar className='h-8 w-8 border'>

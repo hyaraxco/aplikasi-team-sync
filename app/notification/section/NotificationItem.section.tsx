@@ -1,9 +1,11 @@
 'use client'
 
 import { useAuth } from '@/components/auth-provider'
-import { type Activity } from '@/lib/firestore'
+import { getUserData, resolveActorNameFromUserData } from '@/lib/database'
 import { getActivityDisplayMessage, getNotificationTypeStyle } from '@/lib/helpers'
+import type { Activity, UserData } from '@/types'
 import { Timestamp } from 'firebase/firestore' // Import Timestamp
+import { useEffect, useState } from 'react'
 
 // Helper function for relative time (bisa dipindah ke utils jika dipakai di banyak tempat)
 function formatRelativeTime(firebaseTimestamp: Timestamp | any): string {
@@ -35,11 +37,47 @@ function formatRelativeTime(firebaseTimestamp: Timestamp | any): string {
 
 interface NotificationItemProps {
   notification: Activity
+  onNotificationRead?: (notificationId: string) => void
 }
 
-export default function NotificationItem({ notification }: NotificationItemProps) {
+export default function NotificationItem({
+  notification,
+  onNotificationRead,
+}: NotificationItemProps) {
   const { user } = useAuth()
+  const [actorUserData, setActorUserData] = useState<UserData | null>(null)
   const isUnread = notification.status === 'unread'
+
+  // Handle notification click to mark as read
+  const handleNotificationClick = async () => {
+    if (isUnread && notification.id) {
+      try {
+        // Import the function dynamically to avoid import issues
+        const { markActivityAsRead } = await import('@/lib/database')
+        await markActivityAsRead(notification.id)
+        // Call the callback to update parent state
+        onNotificationRead?.(notification.id)
+      } catch (error) {
+        console.error('Error marking notification as read:', error)
+      }
+    }
+  }
+
+  // Fetch user data for the actor
+  useEffect(() => {
+    const fetchActorData = async () => {
+      if (notification.userId && notification.userId !== user?.uid) {
+        try {
+          const userData = await getUserData(notification.userId)
+          setActorUserData(userData)
+        } catch (error) {
+          console.error('Error fetching actor user data:', error)
+        }
+      }
+    }
+
+    fetchActorData()
+  }, [notification.userId, user?.uid])
 
   const { icon: IconComponent, dotColor, titlePrefix } = getNotificationTypeStyle(notification.type)
 
@@ -54,10 +92,27 @@ export default function NotificationItem({ notification }: NotificationItemProps
     title = actionText.includes(title) ? actionText : `${title}: ${actionText}`
   }
 
-  const actorName =
-    notification.userId && user && notification.userId === user.uid
-      ? 'You'
-      : notification.details?.actorName || 'Someone'
+  // Resolve actor name with proper fallback hierarchy
+  const actorName = (() => {
+    // If it's the current user, show "You"
+    if (notification.userId && user && notification.userId === user.uid) {
+      return 'You'
+    }
+
+    // Use fetched user data if available
+    if (actorUserData) {
+      return resolveActorNameFromUserData(actorUserData, {
+        includeRole: true,
+        showUserIdInFallback: true,
+      })
+    }
+
+    // Fallback to details if available, otherwise unknown user with ID
+    return (
+      notification.details?.actorName ||
+      `Unknown User (ID: ${notification.userId?.substring(0, 8) || 'unknown'})`
+    )
+  })()
 
   const message = getActivityDisplayMessage(notification, actorName)
   const time = formatRelativeTime(notification.timestamp)
@@ -65,9 +120,10 @@ export default function NotificationItem({ notification }: NotificationItemProps
   return (
     <div
       className={
-        'flex items-start gap-3 border-b p-4 last:border-b-0 transition-colors ' +
-        (isUnread ? 'bg-muted/10' : 'bg-background') // Sedikit beda untuk unread
+        'flex items-start gap-3 border-b p-4 last:border-b-0 transition-colors cursor-pointer hover:bg-muted/5 ' +
+        (isUnread ? 'bg-muted/20 border-l-4 border-l-primary' : 'bg-background') // Better visual distinction for unread
       }
+      onClick={handleNotificationClick}
     >
       <div className='relative flex-shrink-0 mt-1'>
         <div className='h-10 w-10 rounded-full bg-muted flex items-center justify-center'>
@@ -82,14 +138,14 @@ export default function NotificationItem({ notification }: NotificationItemProps
       <div className='flex-1'>
         <div className='flex items-center justify-between'>
           <h4
-            className={`text-sm font-semibold ${isUnread ? 'text-foreground' : 'text-foreground/80'}`}
+            className={`text-sm ${isUnread ? 'font-semibold text-foreground' : 'font-medium text-foreground/70'}`}
           >
             {title}
           </h4>
           {time && <span className='text-xs text-muted-foreground ml-2 flex-shrink-0'>{time}</span>}
         </div>
         <p
-          className={`mt-0.5 text-sm ${isUnread ? 'text-muted-foreground' : 'text-muted-foreground/70'}`}
+          className={`mt-0.5 text-sm ${isUnread ? 'text-muted-foreground font-medium' : 'text-muted-foreground/60'}`}
         >
           {message}
         </p>

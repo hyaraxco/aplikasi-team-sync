@@ -1,6 +1,6 @@
 'use client'
 
-import { Progress } from '@/components/atomics/progress'
+import { Progress } from '@/components/molecules'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/molecules/card'
 import type { TeamMetrics } from '@/lib/firestore'
 

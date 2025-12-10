@@ -1,17 +1,13 @@
 'use client'
 
-import type React from 'react'
 import { Spinner } from '@/components/atomics/spinner'
+import { addActivity, getUserData } from '@/lib/database'
 import { auth } from '@/lib/firebase'
-import {
-  ActivityActionType,
-  addActivity,
-  getUserData,
-  type UserData,
-  type UserRole,
-} from '@/lib/firestore'
+import type { UserData, UserRole } from '@/types'
+import { ActivityActionType } from '@/types/database'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { usePathname, useRouter } from 'next/navigation'
+import type React from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -45,16 +41,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (user) {
         try {
+          // Email verification is no longer required for login
+          // Users can sign in immediately after registration with "pending" status
+
           // Fetch user data from Firestore
           const fetchedUserData = await getUserData(user.uid)
 
           if (fetchedUserData) {
             if (fetchedUserData.status === 'pending') {
-              // Jika status pending, logout pengguna dan jangan set role
+              // User dengan status pending tidak boleh masuk ke sistem
+              // Logout user dan tampilkan pesan bahwa akun menunggu persetujuan admin
               await addActivity({
                 userId: user.uid,
                 type: 'auth',
-                action: ActivityActionType.AUTH_LOGIN, // Bisa juga aksi custom misal AUTH_LOGIN_PENDING
+                action: ActivityActionType.AUTH_LOGIN,
                 status: 'unread',
                 targetId: user.uid,
                 targetName: user.displayName || user.email || 'User',
@@ -63,19 +63,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   login_status: 'denied_pending_approval',
                 },
               })
-              await signOut(auth) // Logout pengguna
-              setUser(null) // Set user ke null
-              setUserRole(null) // Set role ke null
-              setUserData(null) // Set userData ke null
+              await signOut(auth) // Logout user
+              setUser(null)
+              setUserRole(null)
+              setUserData(null)
               setLoading(false)
-              // Arahkan ke halaman login dengan pesan atau tampilkan pesan di halaman saat ini
-              // Untuk contoh ini, kita tidak redirect tapi mengandalkan logika di bawahnya
-              // yang akan redirect jika tidak di halaman publik.
-              // Anda mungkin ingin menambahkan query param ke router.push("/") untuk menampilkan pesan.
-              return // Hentikan proses lebih lanjut untuk user ini
+
+              // Set error message untuk ditampilkan di login form
+              // Kita akan menggunakan localStorage untuk menyimpan pesan error sementara
+              localStorage.setItem(
+                'pendingAccountMessage',
+                'Akun Anda sedang menunggu persetujuan admin. Silakan tunggu hingga admin menyetujui akun Anda sebelum dapat masuk ke sistem.'
+              )
+
+              return // Stop further processing
             }
+
+            // User dengan status active bisa login
             setUserRole(fetchedUserData.role)
             setUserData(fetchedUserData)
+
+            // Log successful login activity
+            await addActivity({
+              userId: user.uid,
+              type: 'auth',
+              action: ActivityActionType.AUTH_LOGIN,
+              status: 'unread',
+              targetId: user.uid,
+              targetName: user.displayName || user.email || 'User',
+              details: {
+                message: `${user.displayName || user.email} logged in successfully.`,
+                login_status: 'active',
+              },
+            })
 
             // Check for pending user creation activity
             const pendingCreation = localStorage.getItem('pendingUserCreation')
@@ -140,7 +160,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
 
         // Only redirect to login if on a protected page
-        if (pathname !== '/' && pathname !== '/register') {
+        if (
+          pathname !== '/' &&
+          pathname !== '/register' &&
+          pathname !== '/verify-email' &&
+          pathname !== '/forgot-password'
+        ) {
           router.push('/')
         }
       }

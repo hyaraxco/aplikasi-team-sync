@@ -3,15 +3,10 @@
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/atomics/select'
+import { Textarea } from '@/components/atomics/textarea'
 import { useAuth } from '@/components/auth-provider'
+import { FileIcon } from '@/components/files/FileIcon'
+import { FileUpload } from '@/components/files/FileUpload'
 import { DatePicker } from '@/components/molecules/AntDatePicker'
 import {
   Command,
@@ -29,19 +24,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-
-import { Textarea } from '@/components/atomics/textarea'
-import { useToast } from '@/hooks'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/molecules/popover'
 import {
-  getUsers,
-  Timestamp,
-  type Task,
-  type TaskPriority,
-  type TaskStatus,
-  type UserData,
-} from '@/lib/firestore'
-import { cn, formatRupiah, parseCurrencyInput } from '@/lib/utils'
-import { Check, Loader2, UserPlus } from 'lucide-react'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/molecules/select'
+import { useToast } from '@/hooks'
+import { getUsers, updateTask } from '@/lib/database'
+import { StorageServiceFactory } from '@/lib/storage-service'
+import { cn, formatRupiah, parseCurrencyInput } from '@/lib/ui'
+import type { Task, TaskAttachment, TaskPriority, TaskStatus, UserData } from '@/types'
+import { Timestamp } from 'firebase/firestore'
+import { Check, Loader2, Trash2, UserPlus } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
 interface EditTaskDialogProps {
@@ -63,6 +60,8 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
   const [taskDeadline, setTaskDeadline] = useState<Date | null>(null)
   const [taskRate, setTaskRate] = useState<number>(0)
   const [assignedTo, setAssignedTo] = useState<string>('')
+  const [attachments, setAttachments] = useState<TaskAttachment[]>([])
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([])
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -75,7 +74,6 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
   useEffect(() => {
     async function fetchUsers() {
       if (!isOpen) return
-
       setUsersLoading(true)
       try {
         const allUsers = await getUsers()
@@ -87,7 +85,6 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
         setUsersLoading(false)
       }
     }
-
     fetchUsers()
   }, [isOpen])
 
@@ -101,6 +98,8 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
       setTaskDeadline(task.deadline ? task.deadline.toDate() : null)
       setTaskRate(task.taskRate || 0)
       setAssignedTo(task.assignedTo && task.assignedTo.length > 0 ? task.assignedTo[0] || '' : '')
+      setAttachments(task.attachments || [])
+      setFilesToUpload([])
       setError(null)
     }
   }, [isOpen, task])
@@ -109,11 +108,46 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
   const handleTaskRateChange = (value: string) => {
     const numericValue = parseCurrencyInput(value)
     const numValue = Number(numericValue)
-
     if (numericValue === '' || numValue === 0) {
       setTaskRate(0)
     } else {
       setTaskRate(numValue)
+    }
+  }
+
+  const removeExistingAttachment = async (attachmentId: string) => {
+    const attachment = attachments.find(att => att.id === attachmentId)
+    if (!attachment) return
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${attachment.fileName}"? This action cannot be undone.`
+    )
+    if (!confirmed) return
+
+    try {
+      // Delete from Cloudinary storage
+      const storageService = StorageServiceFactory.getService()
+      const deleteSuccess = await storageService.delete(attachment)
+
+      if (!deleteSuccess) {
+        console.warn('Failed to delete file from storage, but continuing with local removal')
+      }
+
+      // Remove from local state
+      setAttachments(prev => prev.filter(att => att.id !== attachmentId))
+
+      toast({
+        title: 'File Deleted',
+        description: `${attachment.fileName} has been removed.`,
+      })
+    } catch (error) {
+      console.error('Error deleting file:', error)
+      toast({
+        title: 'Deletion Failed',
+        description: 'Could not delete the file. Please try again.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -124,14 +158,8 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
       setError('User not authenticated or task not found')
       return
     }
-
-    if (!taskName.trim()) {
-      setError('Task name is required')
-      return
-    }
-
-    if (!taskDeadline) {
-      setError('Deadline is required')
+    if (!taskName.trim() || !taskDeadline) {
+      setError('Task name and deadline are required')
       return
     }
 
@@ -139,17 +167,41 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
     setError(null)
 
     try {
-      // Import updateTask function dynamically
-      const { updateTask } = await import('@/lib/firestore')
+      let finalAttachments = [...attachments]
+
+      // Upload new files if any
+      if (filesToUpload.length > 0) {
+        const storageService = StorageServiceFactory.getService()
+        const newUploadedAttachments: TaskAttachment[] = []
+        for (const file of filesToUpload) {
+          const result = await storageService.upload(file, `tasks/${task.id}`, 'context')
+          newUploadedAttachments.push({
+            id: result.publicId,
+            publicId: result.publicId,
+            fileName: file.name,
+            fileUrl: result.url,
+            secureUrl: result.secureUrl,
+            fileSize: result.fileSize,
+            fileType: file.type,
+            uploadedBy: user.uid,
+            uploadedByRole: 'admin',
+            uploadedAt: Timestamp.now(),
+            attachmentType: 'context',
+            storageProvider: 'cloudinary',
+          })
+        }
+        finalAttachments = [...finalAttachments, ...newUploadedAttachments]
+      }
 
       const taskData: Partial<Task> = {
         name: taskName.trim(),
         status: taskStatus,
         priority: taskPriority,
         deadline: Timestamp.fromDate(taskDeadline),
-        ...(taskDescription.trim() && { description: taskDescription.trim() }),
-        ...(assignedTo && { assignedTo: [assignedTo] }),
-        ...(taskRate > 0 && { taskRate }),
+        description: taskDescription.trim(),
+        assignedTo: assignedTo ? [assignedTo] : [],
+        taskRate: taskRate,
+        attachments: finalAttachments,
       }
 
       await updateTask(task.id, taskData)
@@ -175,19 +227,18 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
   }
 
   const selectedUser = users.find(u => u.id === assignedTo)
-
   if (!task) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='w-full max-w-lg max-h-[90dvh] overflow-hidden'>
+      <DialogContent className='w-full max-w-lg max-h-[90dvh] overflow-auto'>
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
-          <DialogDescription>Update task details and assignment.</DialogDescription>
+          <DialogDescription>Update task details, assignment, and attachments.</DialogDescription>
         </DialogHeader>
 
-        <div className='flex flex-col gap-4'>
-          <form onSubmit={handleSubmit} className='space-y-4'>
+        <div className='flex flex-col gap-4 py-4'>
+          <form id='edit-task-form' onSubmit={handleSubmit} className='space-y-6'>
             {/* Task Name */}
             <div className='grid gap-2'>
               <Label htmlFor='taskName'>Task Name *</Label>
@@ -245,8 +296,8 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
                     {['backlog', 'in_progress', 'completed', 'revision', 'done', 'blocked'].map(
                       status => (
                         <SelectItem key={status} value={status}>
-                          {status.replace('_', ' ').charAt(0).toUpperCase() +
-                            status.replace('_', ' ').slice(1)}
+                          {status.replace(/_/g, ' ').charAt(0).toUpperCase() +
+                            status.replace(/_/g, ' ').slice(1)}
                         </SelectItem>
                       )
                     )}
@@ -267,7 +318,7 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
             </div>
 
             <div className='grid gap-2'>
-              <Label htmlFor='taskRate'>Task Rate (IDR) *</Label>
+              <Label htmlFor='taskRate'>Task Rate (IDR)</Label>
               <Input
                 id='taskRate'
                 type='text'
@@ -346,15 +397,82 @@ export const EditTaskDialog = ({ task, isOpen, onClose, onTaskUpdated }: EditTas
               </Popover>
             </div>
 
+            {/* Attachments Section */}
+            <div className='space-y-4'>
+              <Label>Attachments</Label>
+              {attachments.length > 0 && (
+                <div className='space-y-2'>
+                  {attachments.map(att => (
+                    <div
+                      key={att.id}
+                      className='flex items-center justify-between p-2 border rounded-lg bg-gray-50 dark:bg-gray-800'
+                    >
+                      <div className='flex items-center gap-3 flex-grow min-w-0'>
+                        <FileIcon filename={att.fileName} className='h-6 w-6 flex-shrink-0' />
+                        <div className='flex-grow min-w-0'>
+                          <p className='text-sm font-medium truncate'>{att.fileName}</p>
+                          <p className='text-xs text-muted-foreground'>
+                            {(att.fileSize / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        onClick={() => removeExistingAttachment(att.id)}
+                        className='h-8 w-8 text-red-500 hover:text-red-700'
+                      >
+                        <Trash2 className='h-4 w-4' />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <FileUpload
+                onFilesChange={setFilesToUpload}
+                maxFileSize={5 * 1024 * 1024} // 5MB
+                maxFiles={5}
+                acceptedFileTypes={[
+                  // Documents
+                  'application/pdf',
+                  'application/msword',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  'application/vnd.ms-excel',
+                  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                  'application/vnd.ms-powerpoint',
+                  'text/plain',
+                  'text/csv',
+                  // Images
+                  'image/png',
+                  'image/jpeg',
+                  'image/jpg',
+                  'image/gif',
+                  'image/webp',
+                  'image/bmp',
+                  'image/svg+xml',
+                  // Archives
+                  'application/zip',
+                  'application/x-rar-compressed',
+                  'application/x-7z-compressed',
+                ]}
+                className='w-full'
+              />
+            </div>
+
             {error && <div className='text-red-500 text-sm'>{error}</div>}
           </form>
         </div>
 
-        <DialogFooter className='pt-2'>
+        <DialogFooter className='pt-4 mt-4'>
           <Button variant='outline' onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !taskName.trim() || !taskDeadline}>
+          <Button
+            type='submit'
+            form='edit-task-form'
+            disabled={loading || !taskName.trim() || !taskDeadline}
+          >
             {loading ? (
               <>
                 <Loader2 className='w-4 h-4 mr-2 animate-spin' />

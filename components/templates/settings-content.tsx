@@ -5,6 +5,7 @@ import type React from 'react'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
+import { Textarea } from '@/components/atomics/textarea'
 import { useAuth } from '@/components/auth-provider'
 import {
   Card,
@@ -14,19 +15,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules/tabs'
+import { useState } from 'react'
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/atomics/select'
-import { Separator } from '@/components/atomics/separator'
-import { Switch } from '@/components/atomics/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics/tabs'
-import { Textarea } from '@/components/atomics/textarea'
-import { useState } from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atomics/Avatar.atomic'
+  Separator,
+  Switch,
+} from '../molecules'
 
 export function SettingsContent() {
   const { userRole, user } = useAuth()

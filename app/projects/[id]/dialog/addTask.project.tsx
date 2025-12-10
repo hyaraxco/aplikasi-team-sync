@@ -1,18 +1,11 @@
 'use client'
 
-import { Textarea } from '@/components/atomics'
 import { Button } from '@/components/atomics/button'
 import { Input } from '@/components/atomics/input'
 import { Label } from '@/components/atomics/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/atomics/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/atomics/select'
+import { Textarea } from '@/components/atomics/textarea'
 import { useAuth } from '@/components/auth-provider'
+import { FileUpload } from '@/components/files/FileUpload'
 import { DatePicker } from '@/components/molecules/AntDatePicker'
 import {
   Command,
@@ -30,17 +23,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/molecules/dialog'
-import { useToast } from '@/hooks'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/molecules/popover'
 import {
-  createTask,
-  getUsers,
-  Timestamp,
-  type Task,
-  type TaskPriority,
-  type TaskStatus,
-  type UserData,
-} from '@/lib/firestore'
-import { cn, formatRupiah, parseCurrencyInput } from '@/lib/utils'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/molecules/select'
+import { useToast } from '@/hooks'
+import { createTask, getUsers, updateTask } from '@/lib/database'
+import { StorageServiceFactory } from '@/lib/storage-service'
+import { cn, formatRupiah, parseCurrencyInput } from '@/lib/ui'
+import type { Task, TaskAttachment, TaskPriority, TaskStatus, UserData } from '@/types'
+import { Timestamp } from 'firebase/firestore'
 import { Check, Loader2, UserPlus } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 
@@ -63,6 +59,7 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
   const [taskDeadline, setTaskDeadline] = useState<Date | null>(null)
   const [taskRate, setTaskRate] = useState<number>(0)
   const [assignedTo, setAssignedTo] = useState<string>('')
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([])
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -97,11 +94,10 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
       setTaskName('')
       setTaskDescription('')
       setTaskPriority('medium')
-      // taskStatus is always "backlog" for admin-created tasks
       setTaskDeadline(null)
       setTaskRate(0)
-
       setAssignedTo('')
+      setFilesToUpload([])
       setError(null)
     }
   }, [isOpen])
@@ -125,12 +121,10 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
       setError('User not authenticated')
       return
     }
-
     if (!taskName.trim()) {
       setError('Task name is required')
       return
     }
-
     if (!taskDeadline) {
       setError('Deadline is required')
       return
@@ -140,6 +134,7 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
     setError(null)
 
     try {
+      // 1. Create task data without attachments first
       const taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
         name: taskName.trim(),
         projectId,
@@ -147,12 +142,42 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
         priority: taskPriority,
         deadline: Timestamp.fromDate(taskDeadline),
         createdBy: user.uid,
+        attachments: [], // Start with empty attachments
         ...(taskDescription.trim() && { description: taskDescription.trim() }),
         ...(assignedTo && { assignedTo: [assignedTo] }),
         ...(taskRate > 0 && { taskRate }),
       }
 
+      // 2. Create the task in Firestore to get a taskId
       const taskId = await createTask(taskData)
+
+      // 3. If there are files, upload them now with the taskId
+      if (filesToUpload.length > 0) {
+        const storageService = StorageServiceFactory.getService()
+        const uploadedAttachments: TaskAttachment[] = []
+
+        for (const file of filesToUpload) {
+          const result = await storageService.upload(file, `tasks/${taskId}`, 'context')
+
+          uploadedAttachments.push({
+            id: result.publicId,
+            publicId: result.publicId,
+            fileName: file.name,
+            fileUrl: result.url,
+            secureUrl: result.secureUrl,
+            fileSize: result.fileSize,
+            fileType: file.type,
+            uploadedBy: user.uid,
+            uploadedByRole: 'admin',
+            uploadedAt: Timestamp.now(),
+            attachmentType: 'context',
+            storageProvider: 'cloudinary',
+          })
+        }
+
+        // 4. Update the task with the attachment info
+        await updateTask(taskId, { attachments: uploadedAttachments })
+      }
 
       toast({
         title: 'Success',
@@ -178,31 +203,29 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='w-full max-w-lg max-h-[90dvh] overflow-hidden'>
+      <DialogContent className='w-full max-w-lg max-h-[90dvh] overflow-auto'>
         <DialogHeader>
-          <DialogTitle>Add Task</DialogTitle>
-          <DialogDescription>
-            Create a new task for this project and assign it to a team member.
-          </DialogDescription>
+          <DialogTitle>Tambah Task Baru</DialogTitle>
+          <DialogDescription>Fill in the details below to create a new task.</DialogDescription>
         </DialogHeader>
 
-        <div className='flex flex-col gap-4'>
-          <form onSubmit={handleSubmit} className='space-y-4'>
+        <div className='flex flex-col gap-4 py-4'>
+          <form id='add-task-form' onSubmit={handleSubmit} className='space-y-6'>
             {/* Task Name */}
             <div className='grid gap-2'>
-              <Label htmlFor='taskName'>Task Name *</Label>
+              <Label htmlFor='taskName'>Title *</Label>
               <Input
                 id='taskName'
                 value={taskName}
                 onChange={e => setTaskName(e.target.value)}
-                placeholder='Enter task name'
+                placeholder='Enter task title'
                 required
               />
             </div>
 
             {/* Task Description */}
             <div className='grid gap-2'>
-              <Label htmlFor='taskDescription'>Description</Label>
+              <Label htmlFor='taskDescription'>Deskripsi</Label>
               <Textarea
                 id='taskDescription'
                 value={taskDescription}
@@ -233,18 +256,18 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
                 </Select>
               </div>
               <div className='grid gap-2'>
-                <Label htmlFor='deadline'>Deadline *</Label>
+                <Label htmlFor='deadline'>Due Date *</Label>
                 <DatePicker
                   value={taskDeadline}
                   onChange={date => setTaskDeadline(date)}
-                  placeholder='Select deadline'
+                  placeholder='Select due date'
                   className='w-full'
                 />
               </div>
             </div>
 
             <div className='grid gap-2'>
-              <Label htmlFor='taskRate'>Task Rate (IDR) *</Label>
+              <Label htmlFor='taskRate'>Task Rate (IDR)</Label>
               <Input
                 id='taskRate'
                 type='text'
@@ -323,22 +346,61 @@ export const AddTaskDialog = ({ projectId, isOpen, onClose, onTaskAdded }: AddTa
               </Popover>
             </div>
 
+            {/* Attachments Section */}
+            <div className='grid gap-2'>
+              <Label htmlFor='attachments'>Lampiran Awal (Opsional)</Label>
+              <FileUpload
+                onFilesChange={setFilesToUpload}
+                maxFileSize={5 * 1024 * 1024} // 5MB
+                maxFiles={5}
+                acceptedFileTypes={[
+                  // Documents
+                  'application/pdf',
+                  'application/msword',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  'application/vnd.ms-excel',
+                  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                  'application/vnd.ms-powerpoint',
+                  'text/plain',
+                  'text/csv',
+                  // Images
+                  'image/png',
+                  'image/jpeg',
+                  'image/jpg',
+                  'image/gif',
+                  'image/webp',
+                  'image/bmp',
+                  'image/svg+xml',
+                  // Archives
+                  'application/zip',
+                  'application/x-rar-compressed',
+                  'application/x-7z-compressed',
+                ]}
+                className='w-full'
+              />
+            </div>
+
             {error && <div className='text-red-500 text-sm'>{error}</div>}
           </form>
         </div>
 
-        <DialogFooter className='pt-2'>
+        <DialogFooter className='pt-4 mt-4'>
           <Button variant='outline' onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !taskName.trim() || !taskDeadline}>
+          <Button
+            type='submit'
+            form='add-task-form'
+            disabled={loading || !taskName.trim() || !taskDeadline}
+          >
             {loading ? (
               <>
                 <Loader2 className='w-4 h-4 mr-2 animate-spin' />
                 Creating...
               </>
             ) : (
-              'Create Task'
+              'Simpan Task'
             )}
           </Button>
         </DialogFooter>

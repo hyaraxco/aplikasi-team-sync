@@ -13,21 +13,16 @@ import {
   getTeamProjects,
   getUserData,
   setTeamLeader,
-  type Activity as ActivityType,
-  type Project,
-  type Team,
-  type TeamMetrics,
-  type UserData,
-} from '@/lib/firestore'
+} from '@/lib/database'
+import type { Activity as ActivityType, Project, Team, TeamMetrics, UserData } from '@/types'
 import { AlertCircle, ChevronLeft, Edit2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
 // Import child components and their necessary types
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/atomics'
-import { Alert, AlertDescription, AlertTitle } from '@/components/molecules/Alert.molecule'
+import { Alert, AlertDescription, AlertTitle } from '@/components/atomics/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules'
 import { DeleteConfirmDialog } from '@/components/organisms'
-import { PageHeader } from '@/components/organisms/PageHeader'
 import { EditLeaderDialog } from './EditLeader.section'
 import { MembersTable, type EnrichedTeamMember } from './MemberTable.section'
 import { ProjectsTable } from './ProjectTable.section'
@@ -198,17 +193,13 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
 
   // Placeholder handlers for MembersTable actions
   const handleAddMember = () => {
-    console.log('Add member action triggered for team:', teamId)
     alert('Add member functionality is not yet implemented.')
-    // TODO: Implement dialog or navigation for adding a member
   }
 
   const handleEditMember = (member: EnrichedTeamMember) => {
-    console.log('Edit member action triggered for:', member)
     alert(
       `Edit member functionality for ${member.userData?.displayName || member.userId} is not yet implemented.`
     )
-    // TODO: Implement dialog or navigation for editing a member
   }
 
   const handleOpenEditLeadDialog = () => setEditLeadDialogOpen(true)
@@ -273,11 +264,19 @@ export function TeamDetailContent({ teamId }: TeamDetailContentProps) {
     <div className='flex flex-col gap-6 p-4 md:p-6'>
       {/* Header */}
       <div className='flex flex-wrap items-center justify-between gap-2'>
-        <div className='flex items-center gap-3'>
-          <Button variant='outline' size='icon' onClick={() => router.back()} aria-label='Go back'>
+        <div className='flex items-baseline gap-3'>
+          <Button
+            variant='outline'
+            size='icon'
+            onClick={() => router.back()}
+            aria-label='Go back'
+            className='flex-shrink-0'
+          >
             <ChevronLeft className='h-5 w-5' />
           </Button>
-          <PageHeader title={team.name} />
+          <h1 className='text-2xl sm:text-3xl font-bold tracking-tight m-0 p-0 leading-tight'>
+            {team.name}
+          </h1>
         </div>
         {userRole === 'admin' && (
           <div className='flex items-center gap-2 flex-shrink-0'>

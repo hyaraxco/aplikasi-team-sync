@@ -1,12 +1,11 @@
 'use client'
 
-import type React from 'react'
-
+import { Spinner } from '@/components/atomics/spinner'
 import { useAuth } from '@/components/auth-provider'
 import { Navbar } from '@/components/organisms/navbar'
 import { Sidebar } from '@/components/organisms/sidebar'
-import { Spinner } from '@/components/atomics/spinner'
 import { useRouter } from 'next/navigation'
+import type React from 'react'
 import { useEffect, useState } from 'react'
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {

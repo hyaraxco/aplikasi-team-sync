@@ -2,19 +2,19 @@
 
 import { Button } from '@/components/atomics/button'
 import { useAuth } from '@/components/auth-provider'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/molecules'
 import { DeleteConfirmDialog } from '@/components/organisms'
+
 import {
   deleteProject,
+  getMilestoneProgress,
   getProjectActivities,
   getProjectById,
   getTasks,
   getTeamById,
   getUserData,
-  type Project,
-  type Task,
-  type UserData,
-} from '@/lib/firestore'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs'
+} from '@/lib/database'
+import type { Project, Task, UserData } from '@/types'
 import { ArrowLeft, Edit2, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
@@ -22,8 +22,8 @@ import { EditProjectDialog } from '../dialog/EditProject.section'
 import { MilestoneTab } from './MilestoneTab.section'
 import { ProjectDetailSkeleton } from './ProjectDetailSklaton.section'
 import { ProjectInfoCard } from './ProjectInfoCard'
-import { ProjectStatsCard } from './ProjectStat.section'
-import { ProjectRecentActivityCard } from './RecentActivity.section'
+import { ProjectStatsCard } from './ProjectStat.section' // Removed ProjectStatsData import
+import { ProjectRecentActivityCard } from './RecentActivity.section' // Removed EnrichedActivity import
 import { TasksTab } from './TaskTab.section'
 import { TeamTab } from './TeamTab.section'
 import { UpcomingDeadline } from './UpcomingDeadline.section'
@@ -38,7 +38,8 @@ export function ProjectDetailContent({ projectId }: ProjectDetailContentProps) {
 
   const [project, setProject] = useState<Project | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
-  const [milestones, setMilestones] = useState<any[]>([]) // TODO: replace any with Milestone type jika ada
+  const [milestones, setMilestones] = useState<any[]>([]) // For UpcomingDeadline component
+  const [milestonesWithProgress, setMilestonesWithProgress] = useState<{ progress?: number }[]>([]) // For ProjectStatsCard
   const [members, setMembers] = useState<UserData[]>([])
   const [metrics, setMetrics] = useState<Project['metrics'] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -70,14 +71,48 @@ export function ProjectDetailContent({ projectId }: ProjectDetailContentProps) {
       const totalTasks = fetchedTasks.length
       const completedTasks = fetchedTasks.filter(t => t.status === 'completed').length
       const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
-      setMetrics({ totalTasks, completedTasks, completionRate })
+      setMetrics({
+        totalTasks,
+        completedTasks,
+        completionRate,
+        pendingTasks: totalTasks - completedTasks,
+        totalTeams: 0,
+        activeMilestones: 0,
+      })
 
-      // Fetch seluruh aktivitas project
-      const fetchedActivities = await getProjectActivities(projectId)
-      setActivities(fetchedActivities)
+      // Fetch milestones from project data
+      if (data.milestones && data.milestones.length > 0) {
+        // Convert milestones to format expected by UpcomingDeadline component
+        const formattedMilestones = data.milestones.map(milestone => ({
+          id: milestone.id,
+          title: milestone.title,
+          dueDate: milestone.dueDate.toDate(),
+          status: milestone.status,
+        }))
+        setMilestones(formattedMilestones)
 
-      // TODO: fetch milestones jika ada koleksi milestones, untuk sekarang dummy kosong
-      setMilestones([])
+        // Calculate progress for each milestone for ProjectStatsCard
+        const milestonesWithProgressData = data.milestones.map(milestone => {
+          const progressData = getMilestoneProgress(milestone, fetchedTasks)
+          return {
+            progress: progressData.progress,
+          }
+        })
+        setMilestonesWithProgress(milestonesWithProgressData)
+      } else {
+        setMilestones([])
+        setMilestonesWithProgress([])
+      }
+
+      // Fetch project activities
+      try {
+        const fetchedActivities = await getProjectActivities(projectId)
+        setActivities(fetchedActivities)
+      } catch (error) {
+        console.error('Error fetching activities:', error)
+        // Set empty activities if function doesn't exist or fails
+        setActivities([])
+      }
       // Fetch team members
       if (data.teams && data.teams.length > 0) {
         const memberMap: Record<string, UserData> = {}
@@ -145,7 +180,7 @@ export function ProjectDetailContent({ projectId }: ProjectDetailContentProps) {
     <div className='flex flex-col gap-6 p-4 md:p-6'>
       {/* Header */}
       <div className='flex flex-wrap items-center justify-between gap-2'>
-        <div className='flex items-center gap-3'>
+        <div className='flex items-center gap-3 justify-center'>
           <Button variant='outline' size='icon' onClick={() => router.back()} aria-label='Go back'>
             <ArrowLeft className='h-5 w-5' />
           </Button>
@@ -205,7 +240,7 @@ export function ProjectDetailContent({ projectId }: ProjectDetailContentProps) {
               <TasksTab projectId={project.id} />
             </TabsContent>
             <TabsContent value='milestones' className='space-y-4'>
-              <MilestoneTab milestones={milestones} />
+              <MilestoneTab projectId={project.id} />
             </TabsContent>
             <TabsContent value='team' className='space-y-4'>
               <TeamTab
@@ -227,13 +262,13 @@ export function ProjectDetailContent({ projectId }: ProjectDetailContentProps) {
             averageProjectProgress={metrics?.completionRate ?? 0}
             deadline={project.deadline?.toDate?.()}
             startDate={project.createdAt?.toDate?.()}
-            milestones={project.milestones || []}
+            milestones={milestonesWithProgress}
           />
           <UpcomingDeadline
             tasks={tasks.map(task => ({
               id: task.id,
               title: task.name,
-              dueDate: task.deadline?.toDate?.() || new Date(),
+              dueDate: task.deadline?.toDate ? task.deadline.toDate() : new Date(),
               status: task.status,
             }))}
             milestones={milestones}

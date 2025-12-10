@@ -1,6 +1,8 @@
 'use client'
 
+import { Skeleton } from '@/components/atomics/skeleton'
 import { useAuth } from '@/components/auth-provider'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/molecules/avatar'
 import {
   Card,
   CardContent,
@@ -8,16 +10,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/molecules/card'
-import { Skeleton } from '@/components/atomics/skeleton'
-import {
-  getRecentActivities,
-  getUserActivities,
-  getUserData,
-  type Activity,
-  type UserData,
-} from '@/lib/firestore'
+import { getRecentActivities, getUserActivities, getUserData } from '@/lib/database'
+import { formatActivityMessageWithUsers } from '@/lib/database/activity'
+import type { Activity, UserData } from '@/types'
 import { useEffect, useState } from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from '../../../components/atomics/Avatar.atomic'
 
 export function ActivityFeed() {
   const { user, userRole } = useAuth()
@@ -131,24 +127,43 @@ export function ActivityFeed() {
         ) : activities.length > 0 ? (
           <div className='space-y-4'>
             {activities.map(activity => {
-              const userData = users[activity.userId]
-              const userInitials = userData?.displayName
-                ? userData.displayName.substring(0, 2).toUpperCase()
-                : userData?.email.substring(0, 2).toUpperCase()
-
+              const actorUser = users[activity.userId]
+              let targetUser: UserData | undefined = undefined
+              const details = activity.details || {}
+              if (details.requestedBy && users[details.requestedBy]) {
+                targetUser = users[details.requestedBy]
+              } else if (details.assignedTo && users[details.assignedTo]) {
+                targetUser = users[details.assignedTo]
+              } else if (details.approvedBy && users[details.approvedBy]) {
+                targetUser = users[details.approvedBy]
+              } else if (details.userId && users[details.userId]) {
+                targetUser = users[details.userId]
+              }
+              if (
+                !targetUser &&
+                Array.isArray(details.assignedTo) &&
+                details.assignedTo.length > 0
+              ) {
+                const firstAssignee = details.assignedTo[0]
+                if (users[firstAssignee]) targetUser = users[firstAssignee]
+              }
+              const message = formatActivityMessageWithUsers(activity, actorUser, targetUser, {
+                includeRole: true,
+              })
+              const userInitials = actorUser?.displayName
+                ? actorUser.displayName.substring(0, 2).toUpperCase()
+                : actorUser?.email?.substring(0, 2).toUpperCase()
               return (
                 <div key={activity.id} className='flex items-start gap-4'>
                   <Avatar className='h-9 w-9'>
-                    <AvatarImage src={userData?.photoURL || ''} alt={userData?.displayName || ''} />
+                    <AvatarImage
+                      src={actorUser?.photoURL || ''}
+                      alt={actorUser?.displayName || ''}
+                    />
                     <AvatarFallback>{userInitials}</AvatarFallback>
                   </Avatar>
                   <div className='space-y-1'>
-                    <p className='text-sm font-medium leading-none'>
-                      <span className='font-semibold'>
-                        {userData?.displayName || userData?.email.split('@')[0]}
-                      </span>{' '}
-                      {formatActivityMessage(activity)}
-                    </p>
+                    <p className='text-sm font-medium leading-none'>{message}</p>
                     <p className='text-sm text-muted-foreground'>
                       {formatTimestamp(activity.timestamp)}
                     </p>

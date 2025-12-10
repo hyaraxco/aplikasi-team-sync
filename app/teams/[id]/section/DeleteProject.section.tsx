@@ -1,7 +1,6 @@
 'use client'
 
-import { Spinner } from '@/components/atomics'
-import { Button } from '@/components/atomics/Button.atomic'
+import { Button, Spinner } from '@/components/atomics'
 import {
   Dialog,
   DialogContent,
@@ -9,8 +8,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/molecules/Dialog.molecule'
-import type { Project } from '@/lib/firestore'
+} from '@/components/molecules/dialog'
+import { Project } from '@/types'
 
 interface DeleteProjectDialogProps {
   isOpen: boolean
